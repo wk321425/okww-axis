@@ -49,8 +49,13 @@ Windows 上 `~` 是 `C:\Users\<用户名>`。不用 git 的话点 **Code → Dow
 - 可选：
   - ffmpeg / PySceneDetect —— `video_tool.py` 用来精确跳帧、找剪辑点，`OKWW_FFMPEG` / `OKWW_PYLIB` 指定位置，没有就退回 OpenCV。
   - 官方动作帧表 xlsx —— 不随附，`frame_data.py --xlsx <路径>` 指定。
-  - 「跑轴记录」插件 —— `run_report.py` 读它的记录，`OKWW_AXIS_RECORDER` / `OKWW_AXIS_RUNS` 指定位置。
+  - [「跑轴记录」插件](https://github.com/wk321425/ok-ww-axis-recorder) —— `run_report.py` 读它的记录和反馈包，`OKWW_AXIS_RECORDER`（插件源码目录）/ `OKWW_AXIS_RUNS`（记录目录）指定位置。
   - `export_team.py` 的备份位置用 `OKWW_BACKUP_ROOT` 改。
+
+## 相关项目
+
+- [ok-ww-axis-recorder](https://github.com/wk321425/ok-ww-axis-recorder)：ok-ww 插件「跑轴记录」，每局记下按键/读屏/在场/画面，实机排查先看它。
+- [ok-ww-f-start-combat](https://github.com/wk321425/ok-ww-f-start-combat)：ok-ww 插件「F 开始战斗」，副本里按 F 立即开打。
 
 ## 协议
 
