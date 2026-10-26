@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+# 框架 OCR 跑起来时在 scripts/ 下生成的 openvino 模型缓存(20MB+)
+scripts/cache/
+# frame_data.py 的查询输出
+*_out.txt
+*.png
+*.log

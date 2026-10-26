@@ -1,0 +1,98 @@
+# ok-ww 框架的坑（不看源码看不出来）
+
+行号会随版本漂，用的时候 grep 一下确认还成立。
+
+## 加载与落点
+
+- 自定义代码只在 `configs/custom_teams/<A>__<B>__<C>/` 生效，**三人同时在场**才换类。旧的 `configs/custom_chars/` 是死目录。
+- 目录名 = 三个**当前**类名 casefold 排序 + `__`。上游改过类名（`HavocRover` → `Rover`），旧目录就静默失效。每次大版本更新后对一遍目录名和 `src/char/*.py`。
+- 文件内容跟 `src/char/<类>.py` 逐字相同 = 视为没有自定义（不想改的那个人可以直接拷内置版进去）。
+- 校验：顶层必须有 `class <类名>`，加载后是 `BaseChar` 子类。按 mtime+size 热加载，改完不用重启；`src/` 下的改动要重启而且**每次更新被盖回官方版**。
+- 要长期存活的东西只能写在 `configs/custom_teams/` 的角色文件里（也是唯一能跟着导出走的地方），或者 `working/ok_tasks/`（不在仓库里、更新不动它；界面上的开关/数值选项只能由那里的任务类 `default_config` 声明，改 json 加不出选项）。
+- **UI 上「重置为内置」点确认后直接写盘**，没有二次确认。编辑器页签开着的时候别在外面改文件。
+- 自定义 `__init__` 里跟内置不同的字段会被 `__dict__.update` 打回内置值，在 `reset_state()` 里重申。
+- 凑数队友必须是 `CharFactory` 注册过的类（`char_dict`）；两人队永远不加载自定义代码；单人时 `in_team()` 判不在队伍。
+- **`in_team()` 把"第一个读不到数字牌的格子"当成在场的人**（`BaseWWTask.in_team`，读 `char_1/2/3_text`，只读到 1 个也返回 True）。
+  数字牌被特效/横幅挡住的那一格也会被当成"在场"。2026-10-08 绯洛穗：绯雪 R2 打死 boss 那几帧 1 号数字牌被挡，
+  直接切人的循环读到"1 号位在场"当场停了发键宣布成功，人还是绯雪，之后 5 秒是下一个人的代码在操控她。
+  **确认切人成功要看两格**：目标那格没有数字牌，**并且**切出去的那个人自己那格读得到数字牌（自己读 `char_N_text`，别用 `in_team()`）。
+  参考引擎的 `count >= team_size` 才信 + 不全连读 3 次也能挡一部分，但遮挡持续得久照样被骗。
+  排查信号：切人回程只用了 0.0x 秒（战斗里正常 ~1.2s 切人冷却）、或者下一个人第一次读头像就发现在场的是上一个人。
+- `TriggerTask.trigger()` 根本不会被调用，"每隔 N 秒做一次"写在 `run()` 里；`run()` 返真会重排触发顺序 + `reset_scene`，不干活要返回假值。
+- `ok_tasks/` 热加载会重新导入模块、模块级变量清零，跨重载的状态挂在 `src` 的类对象上。
+
+## 队伍识别会"粘"
+
+- 换了队伍不重启 ok-ww，新角色会被认成上一局站同一槽位的人（`get_char_by_pos`：旧角色置信度 >0.92 就只拿旧角色的模板比，阈值 0.6）。队伍 key 不对 → 自定义目录整个不加载，跑的是内置轮换。
+- **铁证**：日志 `loaded chars success <名字> <置信度>` 跨局一模一样的浮点数。
+- 排查"自定义代码没生效"，第一件事 grep `loaded chars success` 和自己打的 entry 标记。规避：换队后重启 ok-ww。界面 `Chars` 栏也能看。
+
+## 角色 API
+
+- `click_resonance()` 返回三元组 `(clicked, duration, animated)`，`if not self.click_resonance():` 恒假。
+- 大招是能量门控：`current_liberation() > 0` / `liberation_available()`，不要 `has_cd('liberation')`（大招没 CD 数字）。有的角色 `liberation_available()` 恒 True，要读占比。
+- `liberation_available()` 每帧 OCR，短窗口用 `available('liberation', check_cd=False)`。
+- 场下角色技能就绪：大招看 `char._liberation_available`（队友头像上的 lib_ready 模板）；E/Q 用 `task.has_cd(box, char_index)`（读的是上次在场时 OCR 的 CD + 已过时间，没上过场返回 0 = 可用）。
+- `BaseChar.get_current_con()` / `is_con_full()` 会缓存"满"，只有 `switch_out(con_full=True)` 才清。宏里用 `task.get_current_con()`。
+- `get_current_con()` 面积够但环没闭合时钉在 **0.99**（哨兵），只有完整环才是 1。
+- `task.get_cd()` 不在 CD 时返回**负数**。
+- `click_echo(time_out=0)` 不是"直接发 Q"：读屏 False 就掉进 OCR + 轮询慢路径。要立刻放用 `char.send_echo_key()` + `char.record_echo_use()`。
+- `jump()` 在 task 上不在 BaseChar 上。`click(down_time=...)` 只有 pynput 后端真按住。
+- `task.get_box_by_name(name)` 返回共享对象，改 `.height/.width` 污染全局，要裁剪自己 `Box(...)` 新建。
+- `BaseChar.sleep(sec, check_combat=True)` 结尾**无条件** `skip_combat_check = False`。
+- **`has_target()` 有副作用**（sleep 1s + 连按两次 ESC），别在宏里调。判怪死用锁定图标/每次读屏顺手看。
+- **Boss 挑战(敌人轮次那种)锁定图标读不到**：`has_target()` 和抄它读框的 `target_visible()` 整局都是 False（心锁守 2026-10-24 录屏）。判"场上有没有怪"要并上 `task.is_boss()`（破盾/锁图标）和 `task.has_health_bar()`（无副作用，白屏时停里也读得到；血条有怪时一闪一闪，is_boss 稳）。
+- 切人选谁由 `buff_time` 决定（MAIN_DPS=0 / SUB_DPS=14 / HEALER=24），`has_buff()` 只在带满协奏离场时记账。不让某人上场就 `get_switch_priority` 返回 `SwitchPriority.NO`（至少留一个候选）。
+- `wait_until` 的 settle_time 在本项目是 0（`working/config.py` 显式设了）。不传 `post_action` 就是干站着。
+
+## 输入
+
+- **战斗闪避是右键, 不是 `key_config['Dodge Key']`**: Game Hotkey.json 里 "Dodge Key": "lshift" 是疾跑键(导航代码用), 宏里按它在战斗中什么都不做(2026-10-11 爱琳莫: 琳奈"跳闪跳跳"的闪避没打断第一跳)。闪避用 `mouse_down(key='right')` 按 0.04s 再松(`task.click(key='right')` 只按 10ms 可能被吞)。
+- `task.click()` 无坐标时强制 `down_time=0.01`，底层是 post(按下)→post(抬起)→sleep，按下和抬起之间一帧都没有。传 `down_time=` 也没用。
+- `send_key` / `send_key_down` / `mouse_down` / `click` 都会 `try_activate()` 投 `WM_ACTIVATE`，长按期间调它们会把按住打断。
+- PostMessage 的 `send_key_down` 按下时不置 bit30（先前状态），重发是连点不是按键重复。
+- `send_key` / `click` / `mouse_down` 都会 `reset_scene`；纯 `time.sleep` 后读的是旧帧，要 `next_frame()`。`task.frame` 是缓存的。
+- 物理按键可以当"人工介入"开关：`GetAsyncKeyState` 只读得到玩家（硬件层），读不到宏（PostMessage）。单开守护线程轮询**高位**，记墙钟，调用方只认基线之后的按键。
+
+## 处决（F）
+
+- `task.f_break()`：阻塞 0.5~5 秒，期间连按 F **还连打左键**（会打断长按）；只在提示**当下**亮着时才动作，晚 0.1s 这次调用就整个跳过；提示一消失就返回、不等动画演完。
+- 处决动画带全局时停，队伍 HUD 整个隐藏（所有读技能图标的判据恒假，"HUD 消失"类判据会误判成技能出手）；无敌期间不能切人；动画时长因角色而异（今汐 1.57s、菲比 2.4s）。
+- `check_f_break()` 中央那路有 1 秒频率限制，宏跑时 `skip_combat_check=True` 战斗判定线程也不刷新 `can_break` → "处决从来不放"。自己读中央提示。
+- 切人时框架会按 F（`check_f_on_switch`，非治疗默认 True）—— 宏自己控处决时置 False（在 `reset_state` 里）。
+- 宏里推荐：只按 F（最多 3 下，不走 `f_break` 那个连点左键），从第一下起等满动画时长再接下一步。
+
+## 战斗判定与 F 开始战斗
+
+- 「按 F 立刻进战斗」是 `ok_tasks/FStartCombatTask.py` 运行时给 `CombatCheck.do_check_in_combat` 打的补丁（含"锁不到目标时不判脱战"保护）。排查"按 F 没反应"先看日志有没有 `补丁已挂上`、有没有 `start execute`（没有 = 执行器没起来，用户没点【启动】）。
+- 用户定的规矩：**开关一次自动战斗 = 复位到从头准备好，不开打；按 F 才开始，从启动轴第一格跑。** 流程中断不能靠脱战（脱战会让 `reset_state` 重新武装启动轴）。
+- 关卡结束后不脱战保护会撑着，框架还会一直调 `do_perform` —— 每条轴都要 HUD 看门狗和入口 HUD 检查。
+- 大招演出期间 `has_target()` 读不到目标 → 3 秒后 `break out of combat`。宏的最后一步要等演出结束。
+
+## 分享出去的兼容性
+
+- 别人的 ok-ww 版本可能改了**内置方法的签名**（`Phoebe.absolution_or_confession()` 删了 `dodge_cancel` 参数 → 对方第一圈 TypeError、整条轴停）。改名能被 `hasattr` 查出来，改签名查不出来。跨类调内置角色专有方法的地方过一层适配（见 `finalize.md`）。自己继承的那条链不用包。
+
+## get_current_con 的 0.99 不一定是"没满"（心卜穗 10-09）
+
+框架只在协奏环**轮廓闭合**时报 1.0；面积已经 >= 满环面积、但轮廓没认成闭合（特效/背景压在环上）时报 0.99 哨兵，
+日志里是 `is_con_full not full but percent greater than 1, set to 0.99, 1.0x`。等 1.0 的循环就会一直补 A（实测白点 2~14 下）。
+面积比 = count_rings 面积 / `task.con_full_size[ring_index]`（上次见到闭合满环时记的面积）。
+做法（心卜穗 `con_now()`）：哨兵 + 面积比在 1.01~1.15 之间连 3 帧就当满；>1.15 是紫色/同色特效混进环（实测 1.28~2.01，协奏其实没满），不算。
+排查：grep `set to 0.99` 按段统计，看是"满了没认出来"（1.00~1.11）还是"特效污染"（远大于 1）。
+**下限别放到 1.00**（爱琳莫 10-12）：面积比 0.995~1.009 当满切人，6 次下一个人都不是变奏入场 —— 环差最后一截没闭合时，光晕算进面积已经能到 1.00x。照 1.01~1.15、连 3 帧。
+**连 1.00 本身也会早**（日月守 10-18、心锁守 10-24）：环差最后一截时闭合判定已经成立，连 3 帧 1.00 照样不满（心锁守开局守闪后 2A 就读到 1.00，四局心全是普通入场）。
+交棒靠变奏的那一下，协奏要靠**动作量**保证（实机统计"打够多久/打完哪几下必满"），读数只当"明显不够就补"的下限，别拿来决定"可以切了"。
+排查信号：下一个人该有的变奏后续没出来（心锁守 = 锁暝 R 一直不亮），而上一格日志写着 `协奏(con1.00, 0.1s)`。
+**真满的读屏信号 = 另外两人头像外的细白环**（心锁守 10-24）：协奏满（切人能变奏）那一帧，队伍栏里**另外两个人**的头像外面套上一圈细白环往外扩，跟真满同一帧；框架读数早 1.8s 就报 1.00。
+切人后新上场的人自己那格还残留一圈，只看另外两格。实现照抄心锁守 `Hsin.glow_slot / glow_now / con_glow / con_ready`
+（头像中心极坐标展开取上半圈避开数字牌/名字条，半径 80~118(4K) 找白色细脊，同半径角度占比；两格合判 + 连 2 帧）。
+2K/1080 都在真满那帧翻转；亮背景会压低一格、心万阙垂天后 1080 认不出 —— 认不出时退回读数/动作量，别当成"没满"一直补。
+被打断时读数也会假满（心锁守 10-24 18:29：锁暝刻心念被打断，读数 0~0.6 乱跳后读到 0.99/1.00，光圈 <=0.04，下一个人普通入场）。
+本局认出过光圈（`glow_trusted`）的地方，交棒只认光圈：读数满了再等 0.5s 没光圈 = 没满，普攻补到光圈出来（有上限）。
+
+
+## liberation_available 只看 R 框里有没有白像素 + 没冷却数字(2026-10-12 爱琳莫)
+- 会假阳性: 切人刚进场那一帧读到能放, 其实能量差一点。要连 2 帧都能放才算。
+- 别拿一次读数决定放弃: send_lib_until_animation 按 0.5s 没反应读一次 False 就收手, 下游等协奏会卡死; 玩家手动补 R 后切人撞进演出, 整圈崩。
+- 稳的写法: 能量读数只决定"什么时候开始按 R"; 开始按之后 R 和普攻交替(差一点的能量普攻补), HUD 连 2 帧掉了就是放出去了(不管谁按的); 总上限到了就跳过这次 R 继续往下走。等协奏的地方也要容忍 HUD 掉(先等演完再读)。
