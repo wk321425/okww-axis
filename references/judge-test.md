@@ -26,6 +26,8 @@ $PY $J at hsin__rover --image a.png b.png -e "task.in_team()"
 ```
 
 - 队伍名写目录名或能唯一匹配的一段（大小写不敏感）。
+- **录屏画面不是 16:9 就先修**：游戏区被压扁、带黑边时框架认不到人，判据全空（2026-10-28 卡夏釉的 N 卡录屏是 2560x1296 加上下黑边）。先抽一帧看游戏区，再用 ffmpeg `-vf crop=2560:1296:0:72,scale=2560:1440,fps=30` 修成 16:9，之后再 `scan`。
+- 表达式里的角色名是**实例**，不是类：判在场写 `cur is Ciaccona`，写 `isinstance(cur, Ciaccona)` 会报 TypeError。
 - 表达式里有 `task`、角色类名（`Hsin`、`Rover`…）、`c1 c2 c3`（槽位）、`cur`（在场的）、`np`、`cv2`。表达式随便写：`Hsin.con_now() >= 0.99`、`task.get_cd('resonance')`、`task.find_one('suisui_e1', threshold=0.7)`。
 - `scan` 只打印**值变了的时刻**（判据翻转点），全部数值进 csv。`在场=(Rover)` 带括号 = 这帧没看到队伍栏，沿用上一帧的在场角色（跟实机一样）。
 - 速度：框架起来约 2 秒；`scan` 每个采样 × 每种分辨率约 0.14 秒（10 秒 / 0.1 步 / 两种分辨率 ≈ 28 秒）。
