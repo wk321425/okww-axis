@@ -41,6 +41,7 @@
    最好再拿一个故意少参数、少方法的假内置类跑一遍适配层。
 5. **更新 team.json**：`version`（1.0.0 起，小改 1.1.0）、`description` 改成**现行流程**（启动轴/循环轴/保底各一段，写清对用户配置的要求：共鸣模态、链数、声骸、16:9、默认键位、"切人按角色不按编队"）、`author`、`team`（英文显示名按字母序逗号连接）。
    也把同样的流程写进持宏者 docstring。
+   不知道的配置（链数、共效、声骸）别照视频作者的编，空着，汇报里问用户要不要补。
 6. **导出 + 校验 + 备份**：
    ```bash
    F:/ok-ww/data/apps/ok-ww/python/python.exe ~/.claude/skills/okww-axis/scripts/export_team.py <队伍> 定稿v1.0

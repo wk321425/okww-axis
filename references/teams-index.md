@@ -38,6 +38,7 @@
 | 赞妮 / 菲比 / 维里奈 | `Phoebe__Verina__Zani`（赞妮） | 宏发大招后补内置大招状态、菲比一圈上场两次、`native_call` | zanfeiwei |
 | 西格莉卡 / 仇远 / 嘉贝莉娜 | `Qiuyuan__ShoreKeeper__Xigelika`、`Galbrena__Qiuyuan__ShoreKeeper` | 强化重击黄=可放（`is_mouse_forte_full` 模板，别用颜色）、heavy_loop 一个循环跑到底 | xichoushou / jiachoushou |
 | 卡提希娅 / 夏空 / 风主 | `Cartethyia__Ciaccona__Rover`、`Cartethyia__Chisa__Ciaccona` | 夏空回路只能下落后 A 给、芙露德莉斯决意没满不按 R | cartethyia / kaxiaqian |
+| 卡提希娅 / 夏空（双人，釉瑚凑数） | `Cartethyia__Ciaccona__Youhu`（卡夏釉二人转 v1.0.0，照跑轴记录手打模式做的第一条） | 剑槽三格 = 异权（重击/变奏）/ 神权（A4，起手 +45F）/ 人权（E），`get_sword_buffs` 阈值 0.9 白剑和吸过的圆圈剑都算亮；下落吸剑看跳跃小图标亮→连灭 3 次；R 有四种含义（变身/化身/R2），补按前先读形态；芙 E2 起手 = `has_cd('resonance')` 亮约 0.15s，切在 E2 起手 +0.25s 夏空才是空中下落进场；夏空回路格数 `Ciaccona.forte_level()`（点阵绿，满格交给 `is_mouse_forte_full`）；切夏空前中键锁怪；启动轴补到离物理 F 0.43s 再起手 | kaxiayou |
 | 珂莱塔 / 折枝 | `Carlotta__Douling__Zhezhi` | 折枝没有输入缓存（连段按早就丢）、珂莱塔派生下落长度不定 | kezhebu |
 | 弗洛洛 / 坎特蕾拉 | `Cantarella__Mornye__Phrolova`、`Cantarella__Douling__Phrolova` | 坎预输入重击压在处决演出上、坎/莫两个奶关 is_healer | phrolova / fukanbu |
 | 奥古斯塔 | `Augusta__Iuno__ShoreKeeper`（宏在 Augusta.py，入口守岸人；目录现在 ACL 读不了） | 重击一个输入四种结果，宏只管长按/点按时刻 | augusta |
