@@ -54,6 +54,9 @@
 - `BaseChar.sleep(sec, check_combat=True)` 结尾**无条件** `skip_combat_check = False`。
 - **`has_target()` 有副作用**（sleep 1s + 连按两次 ESC），别在宏里调。判怪死用锁定图标/每次读屏顺手看。
 - **Boss 挑战(敌人轮次那种)锁定图标读不到**：`has_target()` 和抄它读框的 `target_visible()` 整局都是 False（心锁守 2026-10-24 录屏）。判"场上有没有怪"要并上 `task.is_boss()`（破盾/锁图标）和 `task.has_health_bar()`（无副作用，白屏时停里也读得到；血条有怪时一闪一闪，is_boss 稳）。
+  - False 多半是**没锁**（读到的是 no_target 图标），不是读不了：矩阵奇藏手打和 F 开打的实机整局都没锁；框架两圈之间中键一下 0.1s 就锁上了。要锁就自己按中键，但只在读到**明确没锁**（no_target）时按 —— 中键是开关，图标读不到（特效挡住）时按下去会把锁解掉。宏里按中键走 SendInput，PostMessage 版会打断按着的左键。
+  - Boss 条也会被特效盖住而队伍 HUD 还在（洛瑟菈大招起手的边框特效盖 1.0s；R2 演完 HUD 回来第 1 帧 Boss 图标还没出来）。"没怪了"要连读 3 次、跨 0.25s 以上，而且只在 R2 前/一圈收尾/圈首这种点上判。
+- **框架模板第一次用到才从磁盘加载**（`FeatureSet` 按名字懒加载，日志 `FeatureSet:read_from_json`，每个 ~70ms；换分辨率整个清空）。宏中途第一次读某个模板会卡在按键上 —— 进宏时把要读的模板都调一遍预热。judge_test 2K/1080 交替跑，每个采样都会重新加载，测耗时要看第二次调用。
 - 切人选谁由 `buff_time` 决定（MAIN_DPS=0 / SUB_DPS=14 / HEALER=24），`has_buff()` 只在带满协奏离场时记账。不让某人上场就 `get_switch_priority` 返回 `SwitchPriority.NO`（至少留一个候选）。
 - `wait_until` 的 settle_time 在本项目是 0（`working/config.py` 显式设了）。不传 `post_action` 就是干站着。
 
