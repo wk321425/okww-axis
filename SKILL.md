@@ -33,6 +33,7 @@ description: OKWW（ok-ww 鸣潮自动战斗框架）自定义队伍战斗轴的
 
 - `frame_data.py` — 查帧表：`find 关键词` / `block 角色名` / `rows sheet 起 止`，结果写 UTF-8 文件再 Read（终端码页会把中文变乱码）
 - `video_tool.py` — 扒视频：`info / frame / sheet / freeze / ocr / keys / slots / cuts`（有 ffmpeg 就用它解码：跳帧精确、快 10 倍、颜色按 bt709 跟游戏一致）
+- `con_ring.py` — 从录屏/攻略视频读协奏环填充比例，按颜色段汇总每个人进场/离场带多少协奏（变奏链对不上时两边逐格比）
 - `judge_test.py` — **离线判据测试**：真框架认人 + 加载队伍代码，把判据放到录屏帧/截图上跑，2K 和缩到 1080 各一遍（`list / at / scan`，见 `references/judge-test.md`）
 - `run_report.py` — **读跑轴记录**：`list / summary / around / frame / sheet / exports`（文字摘要、某一刻前后的事件、只把要看的那几帧写成小图；见 `references/axis-recorder.md`）
 - `check_team.py` — 队伍代码静态检查（目录名、类名、`self.X` 名字解析、被打回的 `__init__` 字段、存图调用、写死像素、team.json）
