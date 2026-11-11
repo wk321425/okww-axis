@@ -158,6 +158,9 @@ class Offline:
         self.task = AutoCombatTask(og.executor, None)
         self.task.feature_set = self.ok.feature_set
         self.task.after_init(executor=ex, scene=ex.scene)
+        # 框架日志里会调 task.tr() 翻译(认不到人时就有一句), 离线没有 app 对象, 不补上就抛 AttributeError
+        if getattr(self.task, '_app', None) is None:
+            self.task.tr = lambda message, *args, **kwargs: message
         self.team_dir = team_dir
 
     def show(self, img):
@@ -179,7 +182,12 @@ class Offline:
                 task.do_reset_to_false()
             # 每次清空再认: 框架认人有粘性(上一次认出的人置信度高就只跟他比), 认错一次会一直错下去
             task.chars = [None, None, None]
-            if task.load_chars() and sorted(type(c).__name__ for c in task.chars if c) == sorted(want):
+            try:
+                loaded = task.load_chars()
+            except Exception as ex:
+                print(f'  {label} 认人出错 {type(ex).__name__}: {str(ex)[:80]}, 换下一帧')
+                continue
+            if loaded and sorted(type(c).__name__ for c in task.chars if c) == sorted(want):
                 print(f'  在 {label} 认出队伍')
                 break
         names = [type(c).__name__ if c else None for c in task.chars]
@@ -405,6 +413,11 @@ if __name__ == '__main__':
         main()
     except SystemExit as e:
         code = e.code if isinstance(e.code, int) else (print(e.code, file=sys.stderr) or 1)
+    except BaseException:
+        # 其他异常也要走到 os._exit: 正常退出会被框架后台线程挂住, 看起来像卡死
+        import traceback
+        traceback.print_exc()
+        code = 1
     sys.stdout.flush()
     sys.stderr.flush()
     os._exit(code)   # 框架起了后台线程, 正常退出会卡住
