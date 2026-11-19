@@ -9,7 +9,7 @@
    - 把截图总开关常量置 False；`check_team.py` 会列出所有 `screenshot( / imencode / tofile / imwrite` 调用，逐个确认都挂在开关下（每张 ~4MB，曾经有一处没开关、每局都往硬盘写）。
    - 删掉这一轮自己建的排查目录（`logs/<前缀>_debug/` 之类）和会话 scratchpad 里对录屏截的帧图。**只删这一轮自己建的**；别的轴的排查目录先问用户那条轴还调不调。
    - 纯文字日志（timeline/trace）照留。
-2. **`check_team.py <队伍>` 0 error**，WARN 逐条确认。
+2. **`check_team.py <队伍>` 0 error**，WARN 逐条确认。其中包括"裸导入椰果版专有模块"：分享出去的代码要椰果版和原版 OKWW 都能跑（见 `framework-pitfalls.md`「分享出去的兼容性」）。
 3. **2K 和 1080p 都验过自算的读屏框**：拿 F8 导出的原图（`run_report.py exports`，`judge_test.py at --image` 两种分辨率一起跑）或用户 DVR 录屏（2560x1440）取几帧，用代码里同一个读屏函数分别读原图和 `cv2.resize` 到 1920x1080 的同一帧，读数要一致。
    做法：`types.SimpleNamespace(task=假task(frame), 常量…)` + 把 `ok.task.task.BaseTask.box_of_screen_scaled` 绑到假 task 上，直接调角色类的读屏方法。
    从攻略视频换算的框不算验证过（游戏区常不是全屏）。

@@ -44,8 +44,9 @@
 
 ```
 模块顶部
-  F 键监视: f_settings(task) / start_f_watch(task, logger)      —— 逐字照抄, 多份拷贝保持一致
-  开关监视: start_enable_watch(task, logger)                     —— 逐字照抄
+  F 键监视 + 开关监视: f_settings / start_f_watch / start_enable_watch
+      —— 椰果版从 src.combat.AxisWatch 导入, 必须包 try/except ImportError 自带一份(原版 OKWW 没这个模块),
+         整段照抄心锁莉 Hsin.py; 见 framework-pitfalls.md「分享出去的兼容性」
   SendInput 结构体 + send_input_left(up)                          —— 需要系统级长按时才要
   class MacroBroken(Exception)                                   —— 切人失败/HUD 长时间不在 -> 整圈放弃
 class <持宏者>(Native<持宏者>):

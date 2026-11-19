@@ -87,6 +87,9 @@
 
 ## 分享出去的兼容性
 
+- **分享出去的代码要椰果版（coco-ww）和原版 OKWW 都能跑**（用户 11-19 定的）。椰果版才有的模块（`src.combat.AxisWatch`、`src.combat.FKeyStart`、`src.recorder`）不许裸导入：包成 `try: from src.combat.AxisWatch import ... / except ImportError:` 再自带一份同样的实现（照抄心锁莉 `Hsin.py` 的监视线程那段，写到 task 上的标记跟 AxisWatch 一样，线程只起一次）。`check_team.py` 查到裸导入报 error。
+  - 不兜底的后果（11-19 心锁莉）：原版用户报"心 R1 后没切锁暝"。日志里每秒一条 `CustomCharLoader:load team character class failed for Hsin: No module named 'src.combat.AxisWatch'`，转发角色打 `custom code is off, falling back to the native rotation`，整局跑的是内置循环（内置心 R1 后自己留场 17 秒打到 R2）。**看别人的日志先 grep `load team character class failed`**。
+  - 验证：用原版的 python（`F:\ok-ww\data\apps\ok-ww\python\python.exe -I`），`sys.path`/cwd 指向原版 `repo`，`importlib` 逐个加载持宏者文件，确认能导入且监视函数来自文件自己；再在椰果版里跑一遍，确认来自 `src.combat.AxisWatch`。
 - 别人的 ok-ww 版本可能改了**内置方法的签名**（`Phoebe.absolution_or_confession()` 删了 `dodge_cancel` 参数 → 对方第一圈 TypeError、整条轴停）。改名能被 `hasattr` 查出来，改签名查不出来。跨类调内置角色专有方法的地方过一层适配（见 `finalize.md`）。自己继承的那条链不用包。
 
 ## get_current_con 的 0.99 不一定是"没满"（心卜穗 10-09）

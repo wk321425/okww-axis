@@ -97,6 +97,9 @@ def load_class(path, class_name):
     return getattr(mod, class_name)
 
 
+COCO_ONLY_MODULES = ('src.combat.AxisWatch', 'src.combat.FKeyStart', 'src.recorder')
+
+
 def check_file(path, base_char_cls, task_cls):
     name = path.stem
     text = path.read_text(encoding='utf-8')
@@ -114,6 +117,15 @@ def check_file(path, base_char_cls, task_cls):
     except Exception as e:
         err(f'{path.name}: 编译失败 {e}')
         return None
+
+    # ---- 椰果版(coco-ww)专有模块必须有原版兜底 ----
+    # 分享出去有人用原版 OKWW: 裸导入椰果版才有的模块 -> 整份代码加载失败, 静默退回内置循环
+    # (11-19 心锁莉: 原版用户报"心 R1 后没切锁暝", 其实是 src.combat.AxisWatch 导入失败)
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module and \
+                any(node.module == m or node.module.startswith(m + '.') for m in COCO_ONLY_MODULES):
+            err(f'{path.name}:{node.lineno}: 裸导入椰果版专有模块 {node.module} -> 原版 OKWW 加载失败; '
+                f'包成 try/except ImportError 并自带一份(照心锁莉 Hsin.py 的监视线程那段)')
 
     try:
         cls = load_class(path, name)
