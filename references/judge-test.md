@@ -17,7 +17,7 @@
 
 ```bash
 PY="F:/coco-ww/python/python.exe -X utf8"   # 原版: F:/ok-ww/data/apps/ok-ww/python/python.exe
-J=~/.claude/skills/okww-axis/scripts/judge_test.py
+J=<skill>/scripts/judge_test.py
 V="E:/录屏/Wuthering Waves/心雷穗完美视频.mp4"
 $PY $J list hsin__rover                                    # 候选判据(只带 self、读屏、不等待不按键的方法)
 $PY $J at hsin__rover --video "$V" --t 100,140 -e "Hsin.forte3_full()" -e "Hsin.con_now()"

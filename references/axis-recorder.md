@@ -29,7 +29,7 @@
 
 ```bash
 PY="F:/coco-ww/python/python.exe -X utf8"      # 原版: F:/ok-ww/data/apps/ok-ww/python/python.exe
-RR=~/.claude/skills/okww-axis/scripts/run_report.py
+RR=<skill>/scripts/run_report.py
 $PY $RR list                                  # 最近几局: 序号、队伍+版本、时长、结束原因、[画面/F8×N]
 $PY $RR summary latest                        # 摘要 + 分圈逐段表(慢的段标 * 并列出起止秒) + 警告/报错日志 + 画面空档
 $PY $RR around 013017 87.5 --span 1.5         # 这一刻前后的事件, 每行带在场角色和代码位置; 点按合成「点按 A ×13」

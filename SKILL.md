@@ -5,7 +5,7 @@ description: OKWW（ok-ww 鸣潮自动战斗框架，以及我们自维护的 co
 
 # OKWW 战斗轴制作
 
-这份 skill 是我们（用户 + Claude）从 2026-08 到 2026-11 做了 20 多条轴之后沉淀下来的方法。每条规则后面都有一次实机翻车，别把它们当成可有可无的建议 —— 跳过任何一条，多半就是再交一次学费。
+这份 skill 是楽山和 AI 助手从 2026-08 到 2026-11 一起做了 20 多条轴之后沉淀下来的方法，哪个 AI 都能照着用。每条规则后面都有一次实机翻车，别把它们当成可有可无的建议 —— 跳过任何一条，多半就是再交一次学费。
 
 **回复一律用中文**（用户要求）。
 
@@ -35,10 +35,10 @@ description: OKWW（ok-ww 鸣潮自动战斗框架，以及我们自维护的 co
 | 官方动作帧表 | `<working>\configs\鸣潮动作数据汇总.xlsx`（不随框架发，别人要自己准备，或 `frame_data.py --xlsx` 指定） |
 | 参考队伍（干跑模板 + 自包含引擎） | **skill 自带** `assets\reference_team\Hsin__Rover__Suisui\`（心雷穗 v1.1.0 导出版：MacroKit 已内联，原版 OKWW 也能用；见那里的 README） |
 | 技能文本 | `https://ww.nanoka.cc/character/<id>`（前端渲染，用内置浏览器 `get_page_text`） |
-| 每条轴的历史 | `~/.claude/projects/F--ok-ww/memory/ok-ww-<队名拼音>-axis.md`（那边 MEMORY.md 有索引）。**在 coco-ww 会话里也写回这里**，coco-ww 的 memory 目录没有副本 |
+| 每条轴的历史笔记 | 楽山机器上是 `~/.claude/projects/F--ok-ww/memory/ok-ww-<队名拼音>-axis.md`（那边 MEMORY.md 有索引；在 coco-ww 里做轴也写回这里）。你的工具没有跨会话记忆，就在队伍目录外面建个笔记文件代替 |
 
-本 skill 的脚本在 skill 目录的 `scripts\` 下（用户级 skill 一般是 `~/.claude/skills/okww-axis/scripts/`），都用上面的自带 python 跑，例如
-`F:/coco-ww/python/python.exe -X utf8 ~/.claude/skills/okww-axis/scripts/check_team.py Hsin__Rover__Suisui`：
+本 skill 的脚本在 skill 目录（下文写作 `<skill>`，就是放 `SKILL.md` 的 `okww-axis` 文件夹）的 `scripts\` 下，都用上面的自带 python 跑，例如
+`F:/coco-ww/python/python.exe -X utf8 <skill>/scripts/check_team.py Hsin__Rover__Suisui`：
 
 - `frame_data.py` — 查帧表：`find 关键词` / `block 角色名` / `rows sheet 起 止`，结果写 UTF-8 文件（默认脚本旁边的 `frame_data_out.txt`，`-o` 改）再 Read（终端码页会把中文变乱码）
 - `video_tool.py` — 扒视频：`info / frame / sheet / freeze / ocr / keys / slots / cuts`（有 ffmpeg 就用它解码：跳帧精确、快 10 倍、颜色按 bt709 跟游戏一致）
@@ -54,7 +54,7 @@ description: OKWW（ok-ww 鸣潮自动战斗框架，以及我们自维护的 co
 
 ### A. 立项：先把这几件事问清楚 / 查清楚
 
-0. **改已有的轴：先读它的 memory**（`ok-ww-<队名拼音>-axis.md`，在 F--ok-ww 项目的 memory 目录，那边 MEMORY.md 里按中文队名找），里面有每一轮实机的结论和"为什么是这个数"。做新轴：在同一个目录新建一个 memory 文件（frontmatter 照已有的抄，description 写队伍/持宏者/目录/当前状态），那边 MEMORY.md 加一行索引；再看 `references/teams-index.md` 有没有做过同一个角色的轴可以抄判据。
+0. **改已有的轴：先读它的 memory**（`ok-ww-<队名拼音>-axis.md`，见环境表「每条轴的历史笔记」，那边 MEMORY.md 里按中文队名找），里面有每一轮实机的结论和"为什么是这个数"。做新轴：在同一个地方新建一份（照已有的格式，开头写队伍/持宏者/目录/当前状态），索引加一行；再看 `references/teams-index.md` 有没有做过同一个角色的轴可以抄判据。
    **只改署名楽山（含「xxx · 楽山改」）的队伍**；别的作者的代码偶尔也会导入进来，不动它，新机制要跟它们共存。
 1. **三个人的框架类名**（不是显示名：守岸人=`ShoreKeeper`、雷主/风主都是 `Rover`、卜灵=`Douling`、秧秧玄翎=`YangYangSp`、琳奈=`Linnai`）。目录名 = 三个类名按 casefold 排序用 `__` 连接，排错了框架**静默忽略**。凑数队友也必须是框架注册过的类，否则整队不加载；两人队永远不加载自定义代码。
 2. **持宏者**：选一个人当整条轴的驱动者（三个人的 `do_perform` 都转到它的 `drive()`），另外两个文件只做转发。持宏者写成 `class X(MacroKit, NativeX)`（见 D 节）；参考实现在 coco-ww 的 `configs/custom_teams/Hsin__Rover__Suisui/`，skill 也自带一份导出版 `assets/reference_team/Hsin__Rover__Suisui/`：`Hsin.py`（持宏）+ `Rover.py`/`Suisui.py`（转发）。

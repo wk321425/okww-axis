@@ -56,7 +56,7 @@
    没实机过的改动别写成"实测"。不知道的配置（链数、共效、声骸）别照视频作者的编，空着，汇报里问用户要不要补。
 7. **导出 + 校验 + 备份**：
    ```bash
-   F:/coco-ww/python/python.exe -X utf8 ~/.claude/skills/okww-axis/scripts/export_team.py <队伍> 定稿v1.0 --copy-to <分享文件夹>
+   F:/coco-ww/python/python.exe -X utf8 <skill>/scripts/export_team.py <队伍> 定稿v1.0 --copy-to <分享文件夹>
    ```
    它会：复制 .py（含 .import.py）+ team.json + dryrun.py.tool 到 `<安装目录>\team_backup\<日期>_<队伍>_<标签>\`（coco-ww 是 `F:\coco-ww\team_backup`）；
    用框架 `export_custom_team` 导出 zip（只含 team.json + 3 个 .py，MacroKit 自动内联）；用 `inspect_team_archive`（导入方那套校验）验；
