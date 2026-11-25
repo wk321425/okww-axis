@@ -64,6 +64,8 @@ build(cls, index, name, char_type)
 - 干跑只能证明"代码按设想跑"，回复用户时把"只干跑过、未实机"的改动单独列出来。
 
 - **继承 MacroKit 的队伍在 coco-ww 里干跑**：`macro_wait` → `precise_wait` 要 `executor.exit_event`，2026-11-24 之前写的干跑工具没有，一跑就 `AttributeError: 'FakeExecutor' object has no attribute 'exit_event'`（`FAILED`，不是轴的问题）。照模板的 `FakeExecutor` 补那几个字段。假 task 上别设 `precise_perform`，暂停检查就整个跳过。
+- **干跑 `OK` 之前先确认测的是哪份代码**（2026-11-26 coco-ww 14 队补干跑时）：早期的干跑工具写死了 `sys.path.insert(0, r'F:\ok-ww\...\working')`、`os.chdir(...)` 甚至队伍代码路径 `...\configs\custom_teams\<队>\{name}.py`。放到 coco-ww 里跑，4 份照样 `OK`，测的却是旧框架 + ok-ww 里的旧版队伍代码；另 7 份才报 `No module named 'src.combat.MacroKit'` 露馅。working 一律从文件位置往上找（`OKWW_WORKING` 优先、旧路径只当最后的兜底），队伍代码从本文件所在目录读。看到干跑过得出奇顺，grep 一下 `F:\\ok-ww` / `sys.path.insert`。
+- **轴自己按 `task.in_combat()` 循环的（龙凤雪 `perform_axis`），假 task 要给 `in_combat`**：没有的话异常被 `still_fighting()` 当成"还在打"，干跑永远停不下来（11-26 撞 600s 超时）。按 `round_no` 判：启动轴 + `DRY_LOOPS` 段打完返回 False。直接读 `task.frame` 像素的判据（`kendo_state`）假 task 没画面，替身成"读不到"，走盲按兜底。
 
 ## 运行
 
