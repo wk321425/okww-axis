@@ -19,7 +19,9 @@ stdout/stderr 改 UTF-8; WORKING = find_working(); sys.path.insert(0, WORKING); 
                      (框架按相对路径 configs/custom_teams 找队伍代码, 所以要 chdir)
 load_team_char_class 加载队伍代码, assert 加载到的是自定义类(没加载到就是目录/类名不对)
 rec(what)            记 (时刻, 事件) 到 LOG
-FakeExecutor         check_enabled() 空实现; trigger_tasks / onetime_tasks 空
+FakeExecutor         check_enabled() 空实现; trigger_tasks / onetime_tasks 空;
+                     exit_event = threading.Event() / current_task=None / debug_mode=True / pause_start=None /
+                     blocked_by_pause() -> False   (coco-ww 里 MacroKit.macro_wait 走 BaseChar.precise_wait, 每片都看这些)
 Game                 假游戏状态机:
   on_field / pending(切人在途) / con{} / e_cd{} / r_cd{} / 各角色资源(回路、能量、形态)
   hud_hidden[] + flickers[](演出中途 HUD 闪一两帧) + freezes[](时停) -> hud_visible(now)
@@ -61,10 +63,13 @@ build(cls, index, name, char_type)
 - 输出按时刻列事件 + 持宏者自己打的 timeline，最后 `OK` / `FAILED`。拿它和视频逐格对表。
 - 干跑只能证明"代码按设想跑"，回复用户时把"只干跑过、未实机"的改动单独列出来。
 
+- **继承 MacroKit 的队伍在 coco-ww 里干跑**：`macro_wait` → `precise_wait` 要 `executor.exit_event`，2026-11-24 之前写的干跑工具没有，一跑就 `AttributeError: 'FakeExecutor' object has no attribute 'exit_event'`（`FAILED`，不是轴的问题）。照模板的 `FakeExecutor` 补那几个字段。假 task 上别设 `precise_perform`，暂停检查就整个跳过。
+
 ## 运行
 
 ```bash
-cd <ok-ww 安装目录>/data/apps/ok-ww/working/configs/custom_teams/<队伍>
-DRY_LOOPS=2 DRY_FAIL=sw,r1 <ok-ww 安装目录>/data/apps/ok-ww/python/python.exe dryrun.py.tool > dry.txt
+cd <working>/configs/custom_teams/<队伍>
+DRY_LOOPS=2 DRY_FAIL=sw,r1 <自带 python> dryrun.py.tool > dry.txt
 ```
-（楽山机器上安装目录是 `F:/ok-ww`。）按墙钟真跑，三圈两三分钟，用后台跑。输出写文件再 Read（中文多、行多）。
+（coco-ww：`<working>` = `F:/coco-ww`，python 是 `F:/coco-ww/python/python.exe -X utf8`；原版：`F:/ok-ww/data/apps/ok-ww/working` 和 `F:/ok-ww/data/apps/ok-ww/python/python.exe`。）按墙钟真跑，三圈两三分钟，用后台跑。输出写文件再 Read（中文多、行多）。
+想干跑一份不在本机 custom_teams 里的代码（比如 zip 里的导出版），别覆盖用户的队伍目录：在 scratchpad 建个假 working（`src` `ok` `assets` `i18n` 用 junction 指过去，拷 `config.py` 和 `configs/*.json`，队伍目录放要测的文件），在那里跑。

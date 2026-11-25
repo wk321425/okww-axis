@@ -6,7 +6,9 @@
 
 | 用户说的 | 先查 | 常见根因 |
 |---|---|---|
-| 自定义轴完全没生效 / 跑的是内置轮换 | grep `loaded chars success`、自己的 entry 标记、界面 Chars 栏 | 队伍认粘了（置信度跨局一模一样，重启 ok-ww）；目录名排序/类名错（上游改名）；三个 .py 少一个；UI「重置为内置」覆盖了文件 |
+| 自定义轴完全没生效 / 跑的是内置轮换 | grep `loaded chars success`、`load team character class failed`、`custom code is off`、自己的 entry 标记、界面 Chars 栏 | 队伍认粘了（置信度跨局一模一样，重启）；目录名排序/类名错（上游改名）；三个 .py 少一个；UI「重置为内置」覆盖了文件 / 切到了内置代码（team.json `code_mode`）；原版 OKWW 用户：`No module named 'src.combat.AxisWatch'`（专有模块没兜底）或 `'src.combat.MacroKit'`（直接拷了 .py，没走导出 zip） |
+| 只会普攻 / 不放技能 / 不锁人（别人那边，换了几条轴都一样） | 他日志里搜 `use WGC_HDR capture`、`did not produce a frame` | 截图方式被自动降到 WGC_HDR，画面暗一半，颜色判据全失效（framework-pitfalls.md「截图方式自动降级」）。不是轴的问题：让游戏画面保持在动，重新点开始 |
+| 某个技能"按了没出"之后人愣一会儿才接着打 | 那一段时间轴：`按 R 没出 → 重试/等冷却 → 才 A`；`retry CAP` 和 ok 的次数 | 保底写成了"原地等它好"。用户口径是**能 A 就别站着等**：没亮就不盲按不等（`click_liberation(wait_if_cd_ready=0)`），每下 A 前看一眼图标（没亮不 OCR，很便宜），亮了插进去放、放完把剩下的 A 点完；亮了放不出只试一次，剩下交给后面那一眼（爱琳莫 v3.2.0 莫宁空中 `air_attack`，11-24 五局 `retry CAP` 零次成功、每局白站 1s） |
 | 开关自动战斗后不从头跑 / 从循环轴中段开始 | 日志 `opener not pending (already armed-down ...)` | 没有 enable 监视线程，或只在 `reset_state` 里启（粘性复用时不跑） |
 | 一直重跑启动轴 / 循环轴轮不到 | 日志形状 `R_fired@36.52` → `target lost` → `enter combat` → `opener entry` | 宏在大招演出里把控制权还回去；`BaseChar.sleep()` 把 `skip_combat_check` 关掉了 |
 | 结算画面上还在乱按 | `drive` 的 HUD 检查、看门狗 | 缺 HUD 看门狗；"带变奏上场"没限制在刚切进来几秒内 |
@@ -60,7 +62,7 @@
 ## 别做的事
 
 - 别在没读日志的情况下改常量。
-- 别改 `src/` 修框架的毛病（更新会被盖回）；写在队伍文件里绕过去。
+- 原版 OKWW 别改 `src/` 修框架的毛病（更新会被盖回），写在队伍文件里绕过去。coco-ww 的 `src/` 能改（我们的仓库），但轴要分享给原版用户，队伍代码里照样得自己绕过去或 try 导入+兜底；框架层的修法跟用户确认过再做，别顺手改。
 - 别把用户没点名的那条轴一起改了。
 - 别把录像里的手滑当轴抄。
 - 窗口切走 / 丢目标（`target lost` + 窗口 `visible:False`）导致的崩不是轴的问题，告诉用户就行。

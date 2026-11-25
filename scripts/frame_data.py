@@ -143,11 +143,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('cmd', choices=['find', 'block', 'rows'])
     ap.add_argument('args', nargs='+')
-    ap.add_argument('-o', '--out', default=None, help='输出文件(UTF-8)。默认 frame_data_out.txt 放在当前目录')
+    ap.add_argument('-o', '--out', default=None,
+                    help='输出文件(UTF-8)。默认 frame_data_out.txt 放在这个脚本旁边(别落进项目仓库)')
     ap.add_argument('--all', action='store_true', help='输出全部列')
     ap.add_argument('--xlsx', default=None, help=f'默认 <working>/configs/{XLSX_NAME}')
     a = ap.parse_args()
-    out_path = a.out or os.path.abspath('frame_data_out.txt')
+    out_path = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frame_data_out.txt')
     xlsx = a.xlsx
     if xlsx is None:
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,6 +1,6 @@
 # 实机排查先读「跑轴记录」
 
-ok-ww 插件「跑轴记录」（楽山机器上源码在 `F:\ok-ww\pr_work\axis_recorder_plugin`）把每一局自动战斗都存了下来。实机报问题时**先读它**，不够再要 DVR 录屏。
+「跑轴记录」把每一局自动战斗都存了下来：coco-ww 里它并进了主程序（`src\recorder\`，记录在 `F:\coco-ww\logs\axis_runs`，界面上有「跑轴复盘」页和详细面板）；原版 OKWW 里是插件（楽山机器上源码在 `F:\ok-ww\pr_work\axis_recorder_plugin`）。实机报问题时**先读它**，不够再要 DVR 录屏。
 以前的做法是：录屏和日志对时，抽帧，一张张看 2K 截图（每张约 1800 token，一次排查常常十几二十张）。现在按键、读数、在场全是文字，脚本筛到出事那几秒，只看 1~3 张 960x540 画面（约 700 token）或者读屏原图小块（几十到几百 token），也不用对时。
 
 ## 存了什么（`working\logs\axis_runs\`）
@@ -28,7 +28,7 @@ ok-ww 插件「跑轴记录」（楽山机器上源码在 `F:\ok-ww\pr_work\axis
 **别把 JSONL 整个读进上下文**，一局有几千行，用脚本看。
 
 ```bash
-PY=F:/ok-ww/data/apps/ok-ww/python/python.exe
+PY="F:/coco-ww/python/python.exe -X utf8"      # 原版: F:/ok-ww/data/apps/ok-ww/python/python.exe
 RR=~/.claude/skills/okww-axis/scripts/run_report.py
 $PY $RR list                                  # 最近几局: 序号、队伍+版本、时长、结束原因、[画面/F8×N]
 $PY $RR summary latest                        # 摘要 + 分圈逐段表(慢的段标 * 并列出起止秒) + 警告/报错日志 + 画面空档
@@ -41,7 +41,8 @@ $PY $RR summary <别人发来的反馈包.zip>          # 先解压到临时目�
 ```
 
 `<局>` 可以写 `latest`、`list` 里的序号、文件名里的一段（如 `013017`）、jsonl 路径或反馈包 zip。图片写到 `--out`（给 scratchpad），不给就写到 `%TEMP%\okww_run_report`。
-解析直接借插件自己的 `runs.py` / `media.py`，结果和复盘页一致。插件源码按 `OKWW_AXIS_RECORDER` > `<安装根>\pr_work\axis_recorder_plugin\axis_recorder` > `working\ok_import\axis_recorder` 的顺序找（楽山机器上 `ok_import` 下的目录普通进程读不了，用的是 pr_work 那份）。
+解析直接借记录器自己的 `runs.py` / `media.py`，结果和复盘页一致。源码按 `OKWW_AXIS_RECORDER` > coco-ww 的 `<working>\src\recorder`（当 `src.recorder` 包导入）> `<安装根>\pr_work\axis_recorder_plugin\axis_recorder` > `working\ok_import\axis_recorder` 的顺序找（原版 OKWW 上 `ok_import` 下的目录普通进程读不了，用的是 pr_work 那份）。在 `F:\coco-ww` 里跑什么都不用设；以前要建 `axis_recorder` junction 的绕法不用了。
+coco-ww 的记录还带延迟统计（`src\recorder\latency.py`，仓库里的 `tools\axis_latency.py` 能单独跑），排查"按键到出手慢"时可以看。
 
 ## 排查顺序
 

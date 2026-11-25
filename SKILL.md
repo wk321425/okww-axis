@@ -1,43 +1,52 @@
 ---
 name: okww-axis
-description: OKWW（ok-ww 鸣潮自动战斗框架）自定义队伍战斗轴的制作与调试手册，汇总了 20 多条轴实机踩出来的经验。凡是在 F:\ok-ww 里做新轴、改启动轴/循环轴、照攻略视频或宏截图扒轴、写持宏者代码、加保底、干跑、看实机跑轴记录（logs/axis_runs）/日志/录屏排查「慢了/没放出来/切早了/卡住/重跑启动轴」、看别人发来的反馈包、定稿导出分享 configs/custom_teams 队伍代码，都要先读这个 skill —— 哪怕用户只说「这个轴 XX 不对」「按这个视频做个 XX 队」「循环轴改一下」「可以了 确认分享」，没提 skill 也要用。
+description: OKWW（ok-ww 鸣潮自动战斗框架，以及我们自维护的 coco-ww）自定义队伍战斗轴的制作与调试手册，汇总了 20 多条轴实机踩出来的经验。凡是在 F:\coco-ww 或 F:\ok-ww 里做新轴、改启动轴/循环轴、照攻略视频或宏截图扒轴、写持宏者代码（继承 MacroKit）、加保底、干跑、看实机跑轴记录（logs/axis_runs）/日志/录屏排查「慢了/没放出来/切早了/卡住/重跑启动轴」、看别人发来的反馈包、定稿导出分享 configs/custom_teams 队伍代码，都要先读这个 skill —— 哪怕用户只说「这个轴 XX 不对」「按这个视频做个 XX 队」「循环轴改一下」「可以了 导出」，没提 skill 也要用。
 ---
 
 # OKWW 战斗轴制作
 
-这份 skill 是我们（用户 + Claude）从 2026-08 到 2026-10 做了 20 多条轴之后沉淀下来的方法。每条规则后面都有一次实机翻车，别把它们当成可有可无的建议 —— 跳过任何一条，多半就是再交一次学费。
+这份 skill 是我们（用户 + Claude）从 2026-08 到 2026-11 做了 20 多条轴之后沉淀下来的方法。每条规则后面都有一次实机翻车，别把它们当成可有可无的建议 —— 跳过任何一条，多半就是再交一次学费。
 
 **回复一律用中文**（用户要求）。
 
 ## 0. 环境速查
 
-下表是作者（楽山）机器上的路径。**别人用这个 skill 时安装目录不一样**：脚本会自己找 ok-ww 的 working 目录（环境变量 `OKWW_WORKING` > 当前目录往上 > `<当前目录>/data/apps/ok-ww/working` > `F:\ok-ww\...`），文档里的 `F:\ok-ww` 换成对方的安装目录读；视频、录屏、帧表、team_backup 和其他队伍目录对方多半没有，先问。
+**2026-11-16 起楽山日常用的是 coco-ww**（`F:\coco-ww`，我们自维护的精简版，只留刷 4C 和自动战斗，F 开战、跑轴记录、MacroKit 都在主程序里）；原版 OKWW（`F:\ok-ww`）留作后备，分享出去的队伍代码两边都要能跑。
+**别人用这个 skill 时安装目录不一样**：脚本会自己找 working 目录（环境变量 `OKWW_WORKING` > 当前目录往上 > `<当前目录>/data/apps/ok-ww/working` > `F:\coco-ww` > `F:\ok-ww\data\apps\ok-ww\working`），文档里的路径换成对方的读；视频、录屏、帧表、team_backup 和其他队伍目录对方多半没有，先问。
 
-| 东西 | 位置 |
+两种目录结构：
+
+| | coco-ww（平铺） | 原版 OKWW |
+|---|---|---|
+| working（有 `src/char/CustomCharLoader.py`） | `F:\coco-ww` 本身 | `F:\ok-ww\data\apps\ok-ww\working` |
+| 自带 python（cv2 / numpy / onnxocr，无 openpyxl） | `F:\coco-ww\python\python.exe`（命令行加 `-X utf8`） | `F:\ok-ww\data\apps\ok-ww\python\python.exe` |
+| `src/` `ok/` 能不能改 | 能：是我们的仓库（`wk321425/coco-ww`），改了提交发版。但**队伍代码别依赖只有 coco-ww 才有的改动**，除非 try 导入+兜底 | **别改**：每次更新盖回官方版 |
+| 跑轴记录源码 | 并进主程序 `src\recorder\`（`run_report.py` 直接认） | 插件 `axis_recorder` |
+| 版本备份 | `F:\coco-ww\team_backup\` | `F:\ok-ww\team_backup\` |
+
+| 东西 | 位置（`<working>` 见上表） |
 |---|---|
-| 框架工作目录 | `F:\ok-ww\data\apps\ok-ww\working`（`src/` `ok/` 每次更新会被盖回官方版，**别改**） |
-| 自带 python（cv2 / numpy / onnxocr，无 openpyxl） | `F:\ok-ww\data\apps\ok-ww\python\python.exe` |
-| ffmpeg 7.1 完整版 / PySceneDetect | `F:\ok-ww\tools\ffmpeg.exe` / `F:\ok-ww\tools\pylib`（装在 ok-ww 环境外面；`video_tool` 自动找，别人机器上用 `OKWW_FFMPEG` / `OKWW_PYLIB` 指定，没有就退回 cv2） |
-| 队伍代码 | `working\configs\custom_teams\<A>__<B>__<C>\<类名>.py` + `team.json` |
-| 日志 | `working\logs\ok-script.log`（时间轴 / trace 都在这） |
-| **跑轴记录**（插件「跑轴记录」，实机排查先看这个） | `working\logs\axis_runs\`：每局按键/读屏读数/在场的 JSONL + 每秒 4 帧画面 + 读屏原图小块 + `export\` F8 导出的原图 + `feedback\` 反馈包。见 `references/axis-recorder.md` |
+| 队伍代码 | `<working>\configs\custom_teams\<A>__<B>__<C>\<类名>.py` + `team.json`（导入过的队还有 `<类名>.import.py`，导出时导的是那份） |
+| 持宏公共原语 | coco-ww `src\combat\MacroKit.py`（见 D 节和 `references/engine.md`）；导出 zip 时自动内联 |
+| 日志 | `<working>\logs\ok-script.log`（时间轴 / trace 都在这） |
+| **跑轴记录**（实机排查先看这个） | `<working>\logs\axis_runs\`：每局按键/读屏读数/在场的 JSONL + 每秒 4 帧画面 + 读屏原图小块 + `export\` F8 导出的原图 + `feedback\` 反馈包。见 `references/axis-recorder.md` |
+| ffmpeg 7.1 完整版 / PySceneDetect | `F:\ok-ww\tools\ffmpeg.exe` / `F:\ok-ww\tools\pylib`（装在框架环境外面；`video_tool` 自动找，别人机器上用 `OKWW_FFMPEG` / `OKWW_PYLIB` 指定，没有就退回 cv2） |
 | 攻略视频 / 用户录屏 | `E:\轴视频\*.mp4`；DVR 原片 `E:\录屏\Wuthering Waves\*.DVR.mp4`（2560x1440，文件名 = 结束时刻） |
-| 官方动作帧表 | `working\configs\鸣潮动作数据汇总.xlsx`（不随 ok-ww 发，别人要自己准备，或 `frame_data.py --xlsx` 指定） |
-| 参考队伍（引擎 + 干跑模板） | **skill 自带** `assets\reference_team\Hsin__Rover__Suisui\`（心雷穗 v1.0.0 的 3 个 .py + team.json + `dryrun.py.tool`，见那里的 README） |
+| 官方动作帧表 | `<working>\configs\鸣潮动作数据汇总.xlsx`（不随框架发，别人要自己准备，或 `frame_data.py --xlsx` 指定） |
+| 参考队伍（干跑模板 + 自包含引擎） | **skill 自带** `assets\reference_team\Hsin__Rover__Suisui\`（心雷穗 v1.1.0 导出版：MacroKit 已内联，原版 OKWW 也能用；见那里的 README） |
 | 技能文本 | `https://ww.nanoka.cc/character/<id>`（前端渲染，用内置浏览器 `get_page_text`） |
-| 版本备份 | `F:\ok-ww\team_backup\<日期>_<队伍>_<标签>\` |
-| 每条轴的历史 | memory 目录 `ok-ww-*-axis.md`（MEMORY.md 有索引） |
+| 每条轴的历史 | `~/.claude/projects/F--ok-ww/memory/ok-ww-<队名拼音>-axis.md`（那边 MEMORY.md 有索引）。**在 coco-ww 会话里也写回这里**，coco-ww 的 memory 目录没有副本 |
 
 本 skill 的脚本在 skill 目录的 `scripts\` 下（用户级 skill 一般是 `~/.claude/skills/okww-axis/scripts/`），都用上面的自带 python 跑，例如
-`F:/ok-ww/data/apps/ok-ww/python/python.exe ~/.claude/skills/okww-axis/scripts/check_team.py Hsin__Rover__Suisui`：
+`F:/coco-ww/python/python.exe -X utf8 ~/.claude/skills/okww-axis/scripts/check_team.py Hsin__Rover__Suisui`：
 
-- `frame_data.py` — 查帧表：`find 关键词` / `block 角色名` / `rows sheet 起 止`，结果写 UTF-8 文件再 Read（终端码页会把中文变乱码）
+- `frame_data.py` — 查帧表：`find 关键词` / `block 角色名` / `rows sheet 起 止`，结果写 UTF-8 文件（默认脚本旁边的 `frame_data_out.txt`，`-o` 改）再 Read（终端码页会把中文变乱码）
 - `video_tool.py` — 扒视频：`info / frame / sheet / freeze / ocr / keys / slots / cuts`（有 ffmpeg 就用它解码：跳帧精确、快 10 倍、颜色按 bt709 跟游戏一致）
 - `con_ring.py` — 从录屏/攻略视频读协奏环填充比例，按颜色段汇总每个人进场/离场带多少协奏（变奏链对不上时两边逐格比）；`--edge` 1° 精度给缺口边缘角度，每格涨幅能直接跟帧表「协奏回收」加总对
 - `judge_test.py` — **离线判据测试**：真框架认人 + 加载队伍代码，把判据放到录屏帧/截图上跑，2K 和缩到 1080 各一遍（`list / at / scan`，见 `references/judge-test.md`）
 - `run_report.py` — **读跑轴记录**：`list / summary / around / frame / sheet / exports`（文字摘要、某一刻前后的事件、只把要看的那几帧写成小图；见 `references/axis-recorder.md`）
-- `check_team.py` — 队伍代码静态检查（目录名、类名、`self.X` 名字解析、被打回的 `__init__` 字段、存图调用、写死像素、team.json）
-- `export_team.py` — 定稿导出 + 校验 + 备份到 team_backup
+- `check_team.py` — 队伍代码静态检查（目录名、类名、`self.X` 名字解析（顺着 MRO 认 MacroKit 的方法）、被打回的 `__init__` 字段、存图调用、写死像素、coco-ww 专有模块的裸导入、team.json）
+- `export_team.py` — 定稿导出 + 校验（MacroKit 内联的那份收回成 import 再比）+ 备份到 team_backup，`--copy-to <目录>` 顺手复制到用户放分享包的文件夹
 
 ## 1. 做一条轴的流程
 
@@ -45,9 +54,10 @@ description: OKWW（ok-ww 鸣潮自动战斗框架）自定义队伍战斗轴的
 
 ### A. 立项：先把这几件事问清楚 / 查清楚
 
-0. **改已有的轴：先读它的 memory**（`ok-ww-<队名拼音>-axis.md`，MEMORY.md 里按中文队名找），里面有每一轮实机的结论和"为什么是这个数"。做新轴：新建一个 memory 文件（frontmatter 照已有的抄，description 写队伍/持宏者/目录/当前状态），MEMORY.md 加一行索引；再看 `references/teams-index.md` 有没有做过同一个角色的轴可以抄判据。
+0. **改已有的轴：先读它的 memory**（`ok-ww-<队名拼音>-axis.md`，在 F--ok-ww 项目的 memory 目录，那边 MEMORY.md 里按中文队名找），里面有每一轮实机的结论和"为什么是这个数"。做新轴：在同一个目录新建一个 memory 文件（frontmatter 照已有的抄，description 写队伍/持宏者/目录/当前状态），那边 MEMORY.md 加一行索引；再看 `references/teams-index.md` 有没有做过同一个角色的轴可以抄判据。
+   **只改署名楽山（含「xxx · 楽山改」）的队伍**；别的作者的代码偶尔也会导入进来，不动它，新机制要跟它们共存。
 1. **三个人的框架类名**（不是显示名：守岸人=`ShoreKeeper`、雷主/风主都是 `Rover`、卜灵=`Douling`、秧秧玄翎=`YangYangSp`、琳奈=`Linnai`）。目录名 = 三个类名按 casefold 排序用 `__` 连接，排错了框架**静默忽略**。凑数队友也必须是框架注册过的类，否则整队不加载；两人队永远不加载自定义代码。
-2. **持宏者**：选一个人当整条轴的驱动者（三个人的 `do_perform` 都转到它的 `drive()`），另外两个文件只做转发。最新的参考实现在 skill 自带的 `assets/reference_team/Hsin__Rover__Suisui/`：`Hsin.py`（引擎）+ `Rover.py`/`Suisui.py`（转发）。
+2. **持宏者**：选一个人当整条轴的驱动者（三个人的 `do_perform` 都转到它的 `drive()`），另外两个文件只做转发。持宏者写成 `class X(MacroKit, NativeX)`（见 D 节）；参考实现在 coco-ww 的 `configs/custom_teams/Hsin__Rover__Suisui/`，skill 也自带一份导出版 `assets/reference_team/Hsin__Rover__Suisui/`：`Hsin.py`（持宏）+ `Rover.py`/`Suisui.py`（转发）。
 3. **用户这边的配置会改变轴**：共鸣模态（心的同奏/电磁是两条完全不同的轴）、命座链数（6 链开局就满资源，0 链要打 A 攒）、声骸首位（尤诺带海之女 vs 无常凶鹭）、练度/共鸣效率（R 能量够不够）。不确定就问，别按视频作者的配置默认。
 4. **入口和出口**：启动轴从谁开始、宏在什么状态交回框架（通常是"某人变奏入场、HUD 在场"），循环轴从哪一格开始。
 
@@ -73,11 +83,17 @@ description: OKWW（ok-ww 鸣潮自动战斗框架）自定义队伍战斗轴的
 
 详见 `references/engine.md`（引擎结构与原语）、`references/judgment-and-fallback.md`（每一格怎么判）。要点：
 
-- **引擎别手抄**：从最新定稿的队伍按方法名逐字抽出来拼（写个构建脚本，顺手检查引用到的常量都定义了）。抄来的东西要逐条重判两类参数：
+- **引擎不再抄，继承 MacroKit**（2026-11-24 起）：`from src.combat.MacroKit import MacroKit, MacroBroken, send_input_left`（单独写在顶层一行），`class Hsin(MacroKit, NativeHsin)`。65 个通用宏原语（`macro_wait` / `tap` / `quick_switch` / `handoff` / `fire_r` / `ensure_r` / `wait_hud_*` / `read_con` …）在那里，队伍文件只写常量、状态、判据和段落。
+  - MacroKit **只有方法**：它读的常量（`A_*` `KEY_*` `SWITCH_*` `HUD_*` `CON_*` `LIB_*` `R_*` `BREAK_*` …）和状态（`macro_t0` `macro_marks` `holding_attack` …）写在队伍类上；`check_team.py` 会顺着 MRO 查名字。
+  - 要不一样的写法：在队伍类里写**同名方法**盖过去（MRO：队伍类 → MacroKit → 原生角色类）。**别往 MacroKit 里加新名字**，也别收框架/原生类上已有的名字：队友代码用 `hasattr(char, 'quick_switch')` 认持宏者，多一个名字判断就变了；改 MacroKit 会动到 20 多支队，要逐队实测。
+  - 分享：导出 zip 时框架把那行 import 换成 MacroKit 源码（原版 OKWW 照样能用），导入时一字不差就收回成 import。**直接把 .py 拷到原版 OKWW 不行**，要走导出。
+  - 原版 OKWW 上做轴（没有 MacroKit）：以 skill 自带的导出版 `Hsin.py` 为底，内联段就是整套原语。
+  - 还没转的老队（各抄一份引擎的）：老代码按方法名逐字对比再抄，别手抄；转换工具 `tools/macrokit_convert.py`（coco-ww 仓库里，只删和 MacroKit 逐字一样的方法）。
+- 从别的轴抄**段落/判据**时逐条重判两类参数：
   - **"按住"语义**：是"按住等条件"（可以松开重按）还是"按住蓄力/派生"（一松就断，绝不能重按）。
   - **旧常量**：重写一条轴之前先 grep 旧版的常量块，带"为什么是这个数"注释的都是实机换来的，视频量不出来；对不上的逐条问"新版把这件事交给谁了"。
 - 每一格先决定**判据还是计时**（`references/judgment-and-fallback.md` §1），能用"识别到的事件当锚点 + 固定时长"就别裸计时。
-- 每条轴都要有的基础设施（照抄引擎即可）：开关自动战斗后从启动轴重跑的 enable 监视线程、物理 F 键监视、HUD 看门狗（结算画面不乱按）、`drive()` 入口先等 HUD、`macro_exit` 里松手+落时间轴、`click()` 重写成按住几十 ms 的 `tap()`、`reset_state()` 里重申被打回的字段（`check_f_on_switch` 等）。
+- 每条轴都要有的基础设施（MacroKit 和参考队伍里都有）：开关自动战斗后从启动轴重跑的 enable 监视线程、物理 F 键监视（coco-ww 从 `src.combat.AxisWatch` 导入，**必须 try 导入 + 自带一份兜底**）、HUD 看门狗（结算画面不乱按）、`drive()` 入口先等 HUD、`macro_exit` 里松手+落时间轴、`click()` 重写成按住几十 ms 的 `tap()`、`reset_state()` 里重申被打回的字段（`check_f_on_switch` 等）。
 - 注释只写**结论和理由**（"这个值干什么、为什么不能再大/再小"），不抄视频字幕、攻略原文、用户原话；实机日志证据（时间戳+读数）可以留。
 - 调试截图挂在一个总开关常量下，每一处都判开关。
 - **自定义读屏框**一律 `task.box_of_screen_scaled(3840, 2160, x1, y1, x2, y2, hcenter=True)` 或相对坐标，阈值用占比 —— 用户 2K，分享对象多是 1080p。
@@ -86,14 +102,15 @@ description: OKWW（ok-ww 鸣潮自动战斗框架）自定义队伍战斗轴的
 ### E. 干跑 + 静态检查（交给用户实机之前）
 
 - `check_team.py <队伍>`：0 error 才交。WARN 逐条看。
-- 干跑工具 `dryrun.py.tool` 放在队伍目录（导出 zip 不带它，所以导入队伍的人手里没有；模板用 skill 自带 `assets/reference_team/Hsin__Rover__Suisui/dryrun.py.tool`，路径自动找，别写死）：假 task + 按资源规则建模的假游戏，真跑启动轴和几圈循环，逐格墙钟跟视频对表。**给每条保底分支一个 `DRY_FAIL` 旋钮** —— 保底是"从来不跑"的代码，干跑不造失败就等于没测（第一次实机 `UnboundLocalError` 停任务就是这么来的）。见 `references/dryrun.md`。
+- 干跑工具 `dryrun.py.tool` 放在队伍目录（导出 zip 不带它，所以导入队伍的人手里没有；模板用 skill 自带 `assets/reference_team/Hsin__Rover__Suisui/dryrun.py.tool`，路径自动找，别写死）：假 task + 按资源规则建模的假游戏，真跑启动轴和几圈循环，逐格墙钟跟视频对表。**给每条保底分支一个 `DRY_FAIL` 旋钮** —— 保底是"从来不跑"的代码，干跑不造失败就等于没测（第一次实机 `UnboundLocalError` 停任务就是这么来的）。继承 MacroKit 的队伍在 coco-ww 里 `macro_wait` 走框架 `precise_wait`，假 executor 要有 `exit_event` 等字段（模板已补，11-24 之前抄的干跑工具会报 `'FakeExecutor' object has no attribute 'exit_event'`）。见 `references/dryrun.md`。
 - 新写/改过的读屏判据，拿 F8 导出的原图（`run_report.py exports`，`judge_test.py at --image`）或用户以前的 DVR 录屏（`judge_test.py scan`）跑：翻转时刻对不对、2K 和 1080 读数一不一致（框架起来 2 秒，不用开游戏）。干跑测调用链，这个测判据本身。
 - 交给用户时说清楚：改了什么、哪些只干跑过（"未实机"）、实机先盯日志里哪几个标记。
 
 ### F. 实机迭代
 
 - **用户报"慢了/没放出来"，第一件事读跑轴记录，不是改常量，也不是先要录屏。** 照 `references/axis-recorder.md` 走：`run_report.py summary` 找慢的段和警告 → `around <时刻>` 看那几秒按了什么、判据读数是多少、走到哪一行代码 → 文字说不清才 `frame` / `sheet` 看一两张小图。别把 JSONL 整个读进来。
-  `ok-script.log` 的 timeline/trace 照样看（跑轴记录里也带了这局的日志）。先确认队伍认对了（grep `loaded chars success`，置信度跨局一模一样 = 粘了上一局的人，让用户重启 ok-ww）、自定义代码加载了（有没有自己打的 entry 标记）。
+  `ok-script.log` 的 timeline/trace 照样看（跑轴记录里也带了这局的日志）。先确认队伍认对了（grep `loaded chars success`，置信度跨局一模一样 = 粘了上一局的人，让用户重启）、自定义代码加载了（有没有自己打的 entry 标记；别人的日志先 grep `load team character class failed`，有这条就是代码没加载上、跑的是内置循环）。
+  别人报"只会普攻 / 不放技能 / 不锁人"：先搜他日志里的 `use WGC_HDR capture` / `did not produce a frame`（截图方式被自动降到 WGC_HDR，画面暗一半，所有颜色判据失效；不是轴的问题，让游戏画面保持在动、重新点开始）。
 - 怀疑判据读错（"明明满了没放""没亮就按了"）：用户按了 F8 就拿导出的原图跑 `judge_test.py at --image`（比录屏准，没有 h264 色偏）；改了阈值再跑一遍，不用每次都让用户实机。
 - **这些才要 DVR 录屏**：定新判据/新框时没有 F8 原图、出事落在轴没取帧的空档里、要精确到帧的时序、做视频、对方没装跑轴记录插件。对录屏：DVR 左下角常有墙钟水印，或用"文件名=结束时刻"往前推，把日志时刻和画面对齐后再下结论；在那几秒跑 `judge_test.py scan` 看判据什么时候翻转。
 - 跟用户约定的实机习惯：发现不对马上按 F8，再关自动战斗，说第几圈、什么现象。别人用分享的轴出问题，让对方在「跑轴复盘」页点「打包反馈」发 zip，`run_report.py summary <zip>` 直接读。
@@ -105,9 +122,11 @@ description: OKWW（ok-ww 鸣潮自动战斗框架）自定义队伍战斗轴的
 
 ### G. 定稿 / 分享（用户说"可以了 / 就这样 / 确认分享"）
 
-照 `references/finalize.md` 的清单走：关掉并删掉调试截图（不用问）、`check_team.py` 全绿、2K/1080p 都验过自算的读屏框、跨类调内置专有方法的地方过签名适配层、更新 team.json 描述和版本、`export_team.py <队伍> 定稿vX` 导出+校验+备份、**提醒用户备份**（备到 custom_teams 外面；换代码时把文件复制进已有文件夹，别整个文件夹搬）、更新 memory。
+照 `references/finalize.md` 的清单走：关掉并删掉调试截图（不用问）、`check_team.py` 全绿、2K/1080p 都验过自算的读屏框、跨类调内置专有方法的地方过签名适配层、改过 `<类名>.py` 的同步 `<类名>.import.py`、更新 team.json（**说明用用户自己那种短格式**：样本/共效/位置/定位 + 实测 + 一行版本说明 + 提醒，在用户上一版说明上加，不重写）、`export_team.py <队伍> 定稿vX --copy-to <分享文件夹>` 导出+校验+备份、**提醒用户备份**（备到 custom_teams 外面；换代码时把文件复制进已有文件夹，别整个文件夹搬）、更新 memory。
 
 ## 2. 核心原则（最贵的十几条）
+
+（原则 15、16 是 2026-11 新加的；每条后面都有一次实机翻车。）
 
 每条的展开、例子和代码形状见 `references/judgment-and-fallback.md` 和 `references/framework-pitfalls.md`。
 
@@ -118,19 +137,21 @@ description: OKWW（ok-ww 鸣潮自动战斗框架）自定义队伍战斗轴的
 5. **交棒不能落在大招演出里。** 宏发完最后一发大招就把控制权还回去，框架在演出里读不到目标 → 判脱战 → 重进战斗 → 又跑一遍启动轴。宏的最后一步必须等演出结束、HUD 回来。
 6. **变奏入场后的第一下动作要分两句写**：先"盖掉入场动画"，再"那一下递出去"。合成一句的症状永远是"那一下没打出来"，加密、加长都没用。
 7. **保底的分界线**：只花时间的（切人确认/重试、等 HUD、等收招、大招重按、纯读屏）默认开；会改游戏状态的（补按技能、额外普攻、多放一次技能）默认关，只在判据明确说"没出去"时才补。**宏表是作者实机验证过的，保底的职责是"别让打断把整轮废掉"，不是"纠正宏"。少打一发远好过打错一发。** 补救那一发的上限要比首发短。
-8. **长按期间不调 `mouse_down()` / `send_key()` / `click()`**（每次都投 `WM_ACTIVATE`，会把按住打断）；按住蓄力/派生的技能**绝不重发按下**（PostMessage 重发是连点不是按键重复）。一次 `mouse_down` 能跨过切人一直有效。
+8. **长按期间不调 `mouse_down()` / `send_key()` / `click()`**（原版 OKWW 每次都投 `WM_ACTIVATE`，会把按住打断；coco-ww v1.0.7 起只在前台状态变过时才补投，但分享的代码要照老规矩写）；按住蓄力/派生的技能**绝不重发按下**（PostMessage 重发是连点不是按键重复）。一次 `mouse_down` 能跨过切人一直有效。
 9. **`task.click()` 按不住**（无坐标时强制 10ms，而且按下和抬起之间一帧都没有）。必须打出来的普攻用 `tap()`（mouse_down → 等 50~60ms → mouse_up），并把持宏类的 `click()` 整个重写成 `tap()`。排查信号：回放总时长明显短于宏表。
 10. **协奏要真满**：`get_current_con()` 的 0.99 是"环还没闭合"的哨兵值，等满要传 1.0、连读几帧；用 `task.get_current_con()`（每次现读），别用角色身上那个会缓存"满"的。
 11. **去抖**：单帧找图会被特效闪光骗到，判据至少连 2 帧；但去抖的最小延迟 = confirm × poll，衔接路径上把 poll 压小，别把 confirm 降到 1。
 12. **加等待之前先问：这个信号会自己翻转吗？** 有的图标打完不灭、要等下一个动作才灭（绯雪架势）；有的角色"普攻被替换"后图标继续亮着只是图案变了（秧秧聆风祀声）—— 这种一侧判据是废的，只能计数/计时。排查信号：日志里那一格耗时恰好等于 cap。
 13. **照抄别人的宏时，前置状态可能不同**：多出来的手动段让协奏变满，同一格就从普通入场变成变奏入场（带 QTE 锁），后面的输入全被吞。
 14. **每条轴都要保证：任何时候开关自动战斗，都从启动轴第一格重跑**；按 F 才开打（开关只是复位）。实现见 `references/engine.md`。
+15. **能 A 就别站着等任何东西**（用户口径，2026-11-24 爱琳莫）：等 CD、等能量、等图标的空档里照打普攻，亮了插进去放，演出不算 A 的时间、放完把剩下的 A 点完；"按了没出、原地等它好"一律不要。实机信号：日志里一段"按 X 没出 → 重试上限原地等 → 才 A"，五局零次成功。
+16. **分享出去的代码 coco-ww 和原版 OKWW 都要能跑**：coco-ww 专有模块（`src.combat.AxisWatch` / `FKeyStart` / `src.recorder`）只能 try 导入 + 自带兜底；MacroKit 是例外（导出时内联）。不兜底的后果是原版用户那边整队静默退回内置循环。
 
 ## 3. 参考文件
 
 | 文件 | 什么时候读 |
 |---|---|
-| `references/engine.md` | 写新队伍代码、改引擎原语、查某个原语的语义 |
+| `references/engine.md` | 写新队伍代码（继承 MacroKit）、改/盖过某个原语、查某个原语的语义 |
 | `references/judgment-and-fallback.md` | 设计每一格的判据/计时/保底；用户说某一格"慢/早/没出" |
 | `references/framework-pitfalls.md` | 调框架 API 之前（`click_resonance` 返回元组、`get_cd` 返回负数、`has_target()` 有副作用……） |
 | `references/video-extraction.md` | 扒视频、读宏截图、对录屏 |

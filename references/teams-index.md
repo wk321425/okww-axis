@@ -1,15 +1,18 @@
 # 已有的轴：去哪抄
 
-详细历史在 memory 目录的 `ok-ww-*-axis.md`（MEMORY.md 有一行索引）。这里只列"新轴要复用某个角色/某段写法时去哪找"。
-状态以 memory 为准，下面是 2026-10-06 的快照。目录名是 `configs/custom_teams/` 下的。
-**除了标"skill 自带"的，这些目录只在楽山的 ok-ww 里**；别人用这个 skill 时手里只有自己导入过的队伍（而且导入的 zip 里没有干跑工具），找不到就以 skill 自带的那份为准。
+详细历史在 F--ok-ww 项目 memory 目录的 `ok-ww-*-axis.md`（那边 MEMORY.md 有一行索引）。这里只列"新轴要复用某个角色/某段写法时去哪找"。
+状态以 memory 为准，表是 2026-10-06 的快照、2026-11-26 补过一次。目录名是 `configs/custom_teams/` 下的，**现役在 `F:\coco-ww\configs\custom_teams\`**（11-16 从 ok-ww 拷过来 29 个队，之后只在 coco-ww 里改）。
+**除了标"skill 自带"的，这些目录只在楽山机器上**；别人用这个 skill 时手里只有自己导入过的队伍（而且导入的 zip 里没有干跑工具），找不到就以 skill 自带的那份为准。
+
+2026-11-24 起楽山的 21 支持宏队伍继承 MacroKit（目录里持宏者文件开头有 `from src.combat.MacroKit import`）；**还是整套自带引擎的**：`Aemeath__Linnai__Mornye`、`Hsin__Lily__Suoming`、`Cartethyia__Ciaccona__Youhu`（故意不转），以及不是楽山写的 `Aemeath__Chisa__Denia`（楽山&Rosa-panda）、`Camellya__Sanhua__Verina` 等 —— 从这些队抄段落时，同名的原语以 MacroKit 为准。
 
 ## 引擎从哪抽
 
 | 要什么 | 抄这份 |
 |---|---|
-| 分段判据型引擎（最新、最全：tap / quick_switch / handoff / switch_retry / fire_r / ensure_r / wait_hud_* / read_con / wait_con_full / press_key_until_cd / HUD 看门狗 / enable+F 监视 / SendInput） | skill 自带 `assets/reference_team/Hsin__Rover__Suisui/Hsin.py`（心雷穗 v1.0.0） |
-| 干跑工具模板 | skill 自带 `assets/reference_team/Hsin__Rover__Suisui/dryrun.py.tool`（队伍 zip 里没有它） |
+| 通用宏原语（tap / quick_switch / handoff / switch_retry / fire_r / ensure_r / wait_hud_* / read_con / wait_con_full / press_key_until_cd / break_prompt / SendInput 左键 …） | **不抄，继承** coco-ww `src/combat/MacroKit.py`（`engine.md` §0） |
+| 持宏者骨架（enable+F 监视的 try 导入兜底、常量块、`drive` / `opener_blocked_by` / `macro_enter`、HUD 看门狗）+ 两个转发文件 | coco-ww `Hsin__Rover__Suisui/`（心雷穗 v1.1.0）；skill 自带它的导出版 `assets/reference_team/Hsin__Rover__Suisui/`（MacroKit 已内联，原版 OKWW 上就以它为底） |
+| 干跑工具模板 | skill 自带 `assets/reference_team/Hsin__Rover__Suisui/dryrun.py.tool`（队伍 zip 里没有它；`FakeExecutor` 已补 `precise_wait` 要的字段） |
 | 宏表回放型（`OPENER_MACRO`/`LOOP_MACRO`、`run_macro`/`play_rows`/`macro_key`/`macro_switch`、SAFETY、MACRO_SPEED、动作词） | `Chisa__Suisui__YangYangSp/YangYangSp.py`（秧千穗 v4.1） |
 | 宏 + 手动段混合、宏里不读屏、`E#`/`E+`/`R!` | `Changli__Jinhsi__Verina/Changli.py`（龙凤维 v2.0） |
 | 按绝对时刻排程回放宏、SendInput 发键 | `Cartethyia__Chisa__Ciaccona/`（卡夏千，目录现在 ACL 读不了，备份在 `team_backup/2026-09-17_Cartethyia__Chisa__Ciaccona_*`） |
@@ -28,7 +31,7 @@
 | 今汐（Jinhsi） | `Hsin__Jinhsi__ShoreKeeper`（新机制）、`Changli__Jinhsi__Verina`（旧） | E 位图标模板 `jx_e_icon`（5 类）、神霓飞芒 5s 窗口、随时处决 `break_tick`/`jx_do_break`；变奏切进来 E 有 ~1.8s 冷却、冷却数字会让图标认成惊龙破空，先读冷却数字再判图标 | xinxishou / longfeng |
 | 景燃 / 尤诺（JingRan / Iuno） | `Iuno__JingRan__ShoreKeeper`（景燃） | 景燃整段按住左键只点 E/闪/F（按住期间发键走不带 activate 的 `key_na`）、形态徽记、尤诺跳=换形态 `iu_jump` | jingyueshou |
 | 秧秧玄翎（YangYangSp） / 千咲（Chisa） | `Chisa__Suisui__YangYangSp`（秧秧） | 剑式奇偶、聆风祀声普攻替换、千咲电锯 +0.17s、处决只按 F | yangqiansui |
-| 莫宁（Mornye） | `Denia__Mornye__Qingxiao`（达尼娅，`Denia.py` 的 `mor_hold_burst`）、`Cantarella__Mornye__Phrolova`（`Phrolova.py` 的 `mor_hold_heavy`） | `lead` 判据（读屏滞后的标准解法：核心满+按住=必然出手）；用户要求莫宁段直接用现成的，别自己写 | qingxiao / phrolova |
+| 莫宁（Mornye） | `Denia__Mornye__Qingxiao`（达尼娅，`Denia.py` 的 `mor_hold_burst`）、`Cantarella__Mornye__Phrolova`（`Phrolova.py` 的 `mor_hold_heavy`）、`Aemeath__Linnai__Mornye`（`Mornye.py` 的 `cast_r` / `air_attack`） | `lead` 判据（读屏滞后的标准解法：核心满+按住=必然出手）；用户要求莫宁段直接用现成的，别自己写。**空中 A 里插 R**（爱琳莫 v3.2.0）：每下 A 前看一眼 R，亮了插进去放、演出不算 A 的时间，没亮不等（`click_liberation(wait_if_cd_ready=0)`）；这版 `on_air`（`has_long_action2`）对莫宁升空能翻（松开重击后 0.65~0.94s） | qingxiao / phrolova / aemeath |
 | 清宵（Qingxiao） | `Denia__Mornye__Qingxiao` | 强化重击隐藏 HUD 3s 会骗过 fire_lib | qingxiao |
 | 达尼娅 / 爱弥斯 / 琳奈 | `Aemeath__Chisa__Denia`（达尼娅）、`Aemeath__Linnai__Mornye` | 老引擎（`intro_pending` 那份还没加 TTL） | denia / aemeath |
 | 绯雪（Hiyuki） | `Chixia__Hiyuki__Youhu`、`Changli__Hiyuki__Jinhsi`、`Hiyuki__Lucilla__Suisui` | 居合链、`hiyuki_right/left` 阈值 0.75、R2 长按不能重发 | hiyuki-solo / longfengxue |
@@ -43,7 +46,8 @@
 | 弗洛洛 / 坎特蕾拉 | `Cantarella__Mornye__Phrolova`、`Cantarella__Douling__Phrolova` | 坎预输入重击压在处决演出上、坎/莫两个奶关 is_healer | phrolova / fukanbu |
 | 奥古斯塔 | `Augusta__Iuno__ShoreKeeper`（宏在 Augusta.py，入口守岸人；目录现在 ACL 读不了） | 重击一个输入四种结果，宏只管长按/点按时刻 | augusta |
 | 锁暝（Suoming） | `Hsin__ShoreKeeper__Suoming`（宏在 Hsin.py，未实机）、`Sanhua__Suoming__Verina`（宏在 Suoming.py） | 妄执条和心应世心同一行，但出招时被自己的粉色特效污染、不能拿来判；念深解伞形 A4 要 A3 后按住（A2 后按住=旋雷破）；念深里妄执满 E=无舍念、按住刻心念不能切人；R 演完声骸要按到进 CD；**框架 `suoming_forte_e` 只认无舍念、不认锁妄念**（念起妄执满的紫圈旋涡伞面），锁散维用自己的 16x16 字形 `SO_WN_GLYPH`/`so_wangnian_score`；按住普攻挨打硬直后不续连段，读自己血条 `so_hp_fill` 掉了就重按 | xinsuoshou |
+| 莉莉（Lily） | `Hsin__Lily__Suoming`（心锁莉，宏在 `Hsin.py`；自带引擎没转 MacroKit） | 判据全用框架原版 Lily（`is_mouse_forte_full` / `is_forte_full` 梦香满、`heavy_in_progress` 引导中、`in_slumberland`、`liberation_available` 带 `lily_liberation` 模板），读不到都有兜底（梦香 cap 4s 照按、认不出引导按满 4.5s 松）；重击位每按一次 E 在梦之魇影（`lily_heavy` 模板）和梦之童话（白水晶，框架没模板）之间换，单数圈认不出引导是正常的；花图标和提示每帧分开读，花真没了（连几帧）才算引导结束；莉莉主段 R 先直接连按（`LY_R_DIRECT`），没放出去才走等亮 | xinsuoli |
 | 露西 / 丽贝卡（Lucy / Rebecca） | `Lucy__Rebecca__ShoreKeeper`、`Lucy__Rebecca__Verina`、`Lucy__Mornye__Rebecca`、`Douling__Lucy__Rebecca` | 露西大招面板左键按顺序点选 | luolishou / luliwei / lumoli / lulibu |
 
 **一个角色在两条队里是两份拷贝**，抄之前看两份哪份更新（memory 里有日期）。
-同一份引擎的老拷贝里还有已知没修的问题（`intro_pending` 无 TTL：`Qiuyuan__ShoreKeeper__Xigelika` / `Aemeath__Chisa__Denia` / `Hiyuki__Lucilla__Suisui`），别从那几份抄引擎。
+老拷贝里还有已知没修的问题（`intro_pending` 无 TTL：`Qiuyuan__ShoreKeeper__Xigelika` / `Aemeath__Chisa__Denia` / `Hiyuki__Lucilla__Suisui` 的 `Suisui.py`），别从那几份抄原语 —— 原语一律用 MacroKit。

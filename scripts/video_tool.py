@@ -58,22 +58,19 @@ def _ff_usable(exe):
     return all(re.search(rf'\s{f}\s', out) for f in ('select', 'crop', 'scale', 'showinfo'))
 
 
-def _okww_tools_dir():
+def _okww_tools_dirs():
     try:
         import okww_paths
-        w = okww_paths.find_working(required=False)
-        return okww_paths.install_root(w) / 'tools' if w else None
+        return okww_paths.tools_dirs(okww_paths.find_working(required=False))
     except Exception:
-        return None
+        return []
 
 
 def find_ffmpeg():
     global _FF
     if _FF is None:
         cands = [os.environ.get('OKWW_FFMPEG'), shutil.which('ffmpeg')]
-        tools = _okww_tools_dir()
-        if tools:
-            cands.append(str(tools / 'ffmpeg.exe'))
+        cands += [str(d / 'ffmpeg.exe') for d in _okww_tools_dirs()]
         _FF = next((c for c in cands if c and os.path.isfile(c) and _ff_usable(c)), '')
     return _FF or None
 
@@ -545,9 +542,7 @@ def cmd_slots(a):
 
 def import_scenedetect():
     cands = [os.environ.get('OKWW_PYLIB')]
-    tools = _okww_tools_dir()
-    if tools:
-        cands.append(str(tools / 'pylib'))
+    cands += [str(d / 'pylib') for d in _okww_tools_dirs()]
     for c in cands:
         if c and os.path.isdir(c) and c not in sys.path:
             sys.path.append(c)

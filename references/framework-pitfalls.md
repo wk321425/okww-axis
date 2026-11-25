@@ -7,8 +7,9 @@
 - 自定义代码只在 `configs/custom_teams/<A>__<B>__<C>/` 生效，**三人同时在场**才换类。旧的 `configs/custom_chars/` 是死目录。
 - 目录名 = 三个**当前**类名 casefold 排序 + `__`。上游改过类名（`HavocRover` → `Rover`），旧目录就静默失效。每次大版本更新后对一遍目录名和 `src/char/*.py`。
 - 文件内容跟 `src/char/<类>.py` 逐字相同 = 视为没有自定义（不想改的那个人可以直接拷内置版进去）。
-- 校验：顶层必须有 `class <类名>`，加载后是 `BaseChar` 子类。按 mtime+size 热加载，改完不用重启；`src/` 下的改动要重启而且**每次更新被盖回官方版**。
-- 要长期存活的东西只能写在 `configs/custom_teams/` 的角色文件里（也是唯一能跟着导出走的地方），或者 `working/ok_tasks/`（不在仓库里、更新不动它；界面上的开关/数值选项只能由那里的任务类 `default_config` 声明，改 json 加不出选项）。
+- 校验：顶层必须有 `class <类名>`，加载后是 `BaseChar` 子类。按 mtime+size 热加载，改完不用重启；`src/` 下的改动要重启，原版 OKWW **每次更新被盖回官方版**（coco-ww 的 `src/` 是我们的仓库，改了提交发版，不会被盖）。
+- 导入过的队伍目录里有 `<类名>.import.py`（导入时的代码）和 `<类名>.py`（正在用的）；界面上能在「导入代码 / 内置代码」之间切（team.json 的 `code_mode`），切内置前会保留改过的代码。**导出导的是 `.import.py`**，改代码两份都要同步。
+- 要长期存活的东西只能写在 `configs/custom_teams/` 的角色文件里（也是唯一能跟着导出走的地方）；原版 OKWW 还有 `working/ok_tasks/`（不在仓库里、更新不动它；界面上的开关/数值选项只能由那里的任务类 `default_config` 声明，改 json 加不出选项）。coco-ww 关了插件和自定义任务（`config.py` 里 `'plugin': False`、`'custom_tasks': False`），要加东西直接写进 `src/`。
 - **UI 上「重置为内置」点确认后直接写盘**，没有二次确认。编辑器页签开着的时候别在外面改文件。
 - 自定义 `__init__` 里跟内置不同的字段会被 `__dict__.update` 打回内置值，在 `reset_state()` 里重申。
 - 凑数队友必须是 `CharFactory` 注册过的类（`char_dict`）；两人队永远不加载自定义代码；单人时 `in_team()` 判不在队伍。
@@ -64,7 +65,8 @@
 
 - **战斗闪避是右键, 不是 `key_config['Dodge Key']`**: Game Hotkey.json 里 "Dodge Key": "lshift" 是疾跑键(导航代码用), 宏里按它在战斗中什么都不做(2026-10-11 爱琳莫: 琳奈"跳闪跳跳"的闪避没打断第一跳)。闪避用 `mouse_down(key='right')` 按 0.04s 再松(`task.click(key='right')` 只按 10ms 可能被吞)。
 - `task.click()` 无坐标时强制 `down_time=0.01`，底层是 post(按下)→post(抬起)→sleep，按下和抬起之间一帧都没有。传 `down_time=` 也没用。
-- `send_key` / `send_key_down` / `mouse_down` / `click` 都会 `try_activate()` 投 `WM_ACTIVATE`，长按期间调它们会把按住打断。
+- `send_key` / `send_key_down` / `mouse_down` / `click` 都会 `try_activate()` 投 `WM_ACTIVATE`，长按期间调它们会把按住打断（原版 OKWW）。coco-ww v1.0.7 起 `try_activate` 只在窗口前台状态变过之后才真投（`on_visible` 清掉记录），不再打断按住 —— 分享的代码仍按原版的规矩写。
+- coco-ww 的交互方式可选 **Pynput 前台输入**（真键鼠事件，游戏要在前台；`GetAsyncKeyState` 看得到宏自己按的键）。暂停、游戏切到后台时 `precise_wait` 会松开按住的键并让这段宏从头来（见下面「暂停」）。
 - PostMessage 的 `send_key_down` 按下时不置 bit30（先前状态），重发是连点不是按键重复。
 - `send_key` / `click` / `mouse_down` 都会 `reset_scene`；纯 `time.sleep` 后读的是旧帧，要 `next_frame()`。`task.frame` 是缓存的。
 - 物理按键可以当"人工介入"开关：`GetAsyncKeyState` 只读得到玩家（硬件层），读不到宏（PostMessage）。单开守护线程轮询**高位**，记墙钟，调用方只认基线之后的按键。
@@ -78,9 +80,21 @@
 - 切人时框架会按 F（`check_f_on_switch`，非治疗默认 True）—— 宏自己控处决时置 False（在 `reset_state` 里）。
 - 宏里推荐：只按 F（最多 3 下，不走 `f_break` 那个连点左键），从第一下起等满动画时长再接下一步。
 
+## 暂停与精确等待（coco-ww）
+
+- `BaseChar.precise_wait(sec)`：不走框架的 `sleep`（那个每 0.4s 插一次战斗判定，没锁住目标时原地点中键找怪，一卡 3~30 秒）。停任务马上抛 `TaskDisabledException`；**暂停 / 前台模式下游戏不在前台 / 这次上场中途暂停过**：先松开战斗任务记着的按键，再抛 `PreciseWaitPaused`，`BaseChar.perform` 接住、等解除暂停后返回，框架重新判战斗、宏从头跑（不接着暂停前的半截按）。MacroKit 的 `macro_wait` 优先用它。
+- `PreciseWaitPaused` 继承 `BaseException`：队伍代码里到处是 `except Exception` 兜底，吞不掉它。**宏里别写裸 `except:` / `except BaseException:`**，否则暂停被吞，键松了、宏接着按半截。
+- 以前 `send_key_up` 发键前会等暂停解除，暂停那一刻按住的键要等恢复才松；v1.0.7 起暂停时直接松。
+
+## 截图方式自动降级（只会普攻 / 不放技能 / 不锁人）
+
+- 开始任务时 WGC 1.5 秒拿不到新帧，框架按 `config.py` 里 `capture_method` 的顺序降到 **WGC_HDR**（用户选了 WGC 也一样，每次点开始都会重新探测）。WGC_HDR 按 1/4 曝光转换，没开 HDR 的屏幕画面暗一半（白 255 → 137），所有颜色/亮度判据失效，表现为只会普攻、不放技能、不锁人。上游 ok-script 截至 v3.0.12 也没修。
+- 别人报这种症状，先搜他日志里的 `use WGC_HDR capture` 和 `did not produce a frame`。临时绕过：让游戏画面保持在动（别最小化），重新点一次开始。**不是轴的问题，别去改判据阈值。**
+
 ## 战斗判定与 F 开始战斗
 
-- 「按 F 立刻进战斗」是 `ok_tasks/FStartCombatTask.py` 运行时给 `CombatCheck.do_check_in_combat` 打的补丁（含"锁不到目标时不判脱战"保护）。排查"按 F 没反应"先看日志有没有 `补丁已挂上`、有没有 `start execute`（没有 = 执行器没起来，用户没点【启动】）。
+- coco-ww：F 开战并进了自动战斗本身（`src/task/AutoCombatTask.py` + `src/combat/CombatCheck.py` + `src/combat/FKeyStart.py`），选项在自动战斗卡片里（按 F 开始战斗 / F 之后等待 / 没锁到目标最多撑几秒）。还留着一个叫 `FStartCombatTask` 的兼容壳（不显示），因为持宏者代码按这个类名找任务读 `enabled` / `f_start_delay`、往 `task._f_pressed_at` 写按键时刻 —— 别删它，队伍代码里也别换成别的名字。
+- 原版 OKWW：「按 F 立刻进战斗」是 `ok_tasks/FStartCombatTask.py` 运行时给 `CombatCheck.do_check_in_combat` 打的补丁（含"锁不到目标时不判脱战"保护）。排查"按 F 没反应"先看日志有没有 `补丁已挂上`、有没有 `start execute`（没有 = 执行器没起来，用户没点【启动】）。
 - 用户定的规矩：**开关一次自动战斗 = 复位到从头准备好，不开打；按 F 才开始，从启动轴第一格跑。** 流程中断不能靠脱战（脱战会让 `reset_state` 重新武装启动轴）。
 - 关卡结束后不脱战保护会撑着，框架还会一直调 `do_perform` —— 每条轴都要 HUD 看门狗和入口 HUD 检查。
 - 大招演出期间 `has_target()` 读不到目标 → 3 秒后 `break out of combat`。宏的最后一步要等演出结束。
@@ -90,6 +104,7 @@
 - **分享出去的代码要椰果版（coco-ww）和原版 OKWW 都能跑**（用户 11-19 定的）。椰果版才有的模块（`src.combat.AxisWatch`、`src.combat.FKeyStart`、`src.recorder`）不许裸导入：包成 `try: from src.combat.AxisWatch import ... / except ImportError:` 再自带一份同样的实现（照抄心锁莉 `Hsin.py` 的监视线程那段，写到 task 上的标记跟 AxisWatch 一样，线程只起一次）。`check_team.py` 查到裸导入报 error。
   - 不兜底的后果（11-19 心锁莉）：原版用户报"心 R1 后没切锁暝"。日志里每秒一条 `CustomCharLoader:load team character class failed for Hsin: No module named 'src.combat.AxisWatch'`，转发角色打 `custom code is off, falling back to the native rotation`，整局跑的是内置循环（内置心 R1 后自己留场 17 秒打到 R2）。**看别人的日志先 grep `load team character class failed`**。
   - 验证：用原版的 python（`F:\ok-ww\data\apps\ok-ww\python\python.exe -I`），`sys.path`/cwd 指向原版 `repo`，`importlib` 逐个加载持宏者文件，确认能导入且监视函数来自文件自己；再在椰果版里跑一遍，确认来自 `src.combat.AxisWatch`。
+  - **MacroKit 是例外**：`from src.combat.MacroKit import ...` 裸导入是对的，`CustomCharLoader` 的 `SHARED_TEAM_MODULES` 在导出 zip 时把它换成源码。所以原版用户要拿**导出的 zip**（或工坊），直接拷 `.py` 过去会 `No module named 'src.combat.MacroKit'`。验证原版能用时拿 zip 里的文件加载，`MacroKit.__module__` 应该是文件自己。
 - 别人的 ok-ww 版本可能改了**内置方法的签名**（`Phoebe.absolution_or_confession()` 删了 `dodge_cancel` 参数 → 对方第一圈 TypeError、整条轴停）。改名能被 `hasattr` 查出来，改签名查不出来。跨类调内置角色专有方法的地方过一层适配（见 `finalize.md`）。自己继承的那条链不用包。
 
 ## get_current_con 的 0.99 不一定是"没满"（心卜穗 10-09）

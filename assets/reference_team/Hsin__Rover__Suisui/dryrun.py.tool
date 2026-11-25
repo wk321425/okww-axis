@@ -30,10 +30,13 @@
                          e1miss    心照世相 E 没打碎活字心锁(照世心不够 300, 走统御众机补救)
                          lin       心第一次按住被打断(临寰宇没出, 要补 A 重按)
                          hudlost   循环 #1 心万阙垂天之后关卡结束(HUD 再也不回来)
+                         nowave    心万阙垂天把这一波打死, 新怪 2s 后才刷(穗穗变奏打空不回协奏, 要等新怪再切)
+                         r2e       心临寰宇之后大招能量差一截(要再普攻 6 下 R 位才变万阙垂天)
 """
 import os
 import random
 import sys
+import threading
 import time
 import types
 from pathlib import Path
@@ -77,9 +80,17 @@ class FakeExecutor:
     trigger_tasks = []
     onetime_tasks = []
     interaction = None
+    # coco-ww 的 MacroKit.macro_wait 走 BaseChar.precise_wait, 它每片都看 exit_event(停任务)和暂停状态
+    exit_event = threading.Event()
+    current_task = None
+    debug_mode = True
+    pause_start = None
 
     def check_enabled(self, check_pause=False):
         pass
+
+    def blocked_by_pause(self):
+        return False
 
 
 class Game:
@@ -128,6 +139,8 @@ class Game:
         self.zhao_due = []
         self.tongyu = False
         self.lin_unlocked = False
+        self.r2_need_taps = 0
+        self.no_target_until = 0.0
         self.heavy_fail = None
         self.lin_block = False
         self.normal_heavy_done = False
@@ -198,7 +211,10 @@ class Game:
                 self.qiang_until = now + 15.0
                 self.lock_until = now + 1.4             # 视频: 变奏入场 ~1.4s 里按的 E 全丢
                 self.no_switch_until = now + 1.0
-                self.add_con(SU, 0.47)
+                if now >= self.no_target_until:
+                    self.add_con(SU, 0.47)             # QTE 命中才回(没怪打空就没有)
+                else:
+                    rec('!!穗穗变奏打空(没怪), 协奏没回')
             elif dst == XN and intro:
                 if self.xn_mode == 'ying':
                     self.ying = 100 if FULL else min(100, self.ying + 60)
@@ -249,6 +265,7 @@ class Game:
                 if self.tongyu and not self.lin_block and self.zhao_xin == 0 and held >= 0.45:
                     self.tongyu = False
                     self.lin_unlocked = True
+                    self.r2_need_taps = 6 if self.fail_once('r2e') else 0
                     self.hide(2.0)
                     self.add_con(XN, 0.15)
                     rec('心临寰宇出手')
@@ -391,6 +408,8 @@ class Game:
                     self.r2_done = False
                     self.hide(4.3, flick=(0.55, 3.6))
                     rec('心转相')
+                elif self.xn_mode == 'zhao' and self.lin_unlocked and self.r2_need_taps > 0:
+                    rec('!!心按了 R 但大招能量不够(借相)')
                 elif self.xn_mode == 'zhao' and self.lin_unlocked:
                     self.lin_unlocked = False
                     self.xn_mode = 'ying'
@@ -399,6 +418,8 @@ class Game:
                     self.hide(5.0)
                     self.add_con(XN, 0.15)
                     rec('心万阙垂天')
+                    if self.fail_once('nowave'):
+                        self.no_target_until = now + 5.0 + 2.0      # 演出 5s + 新怪 2s 后才刷
                     if 'hudlost' in FAILS and self.cycle == 1:
                         self.hud_dead = True
                         rec('!!关卡结束(HUD 没了)')
@@ -442,6 +463,10 @@ class Game:
                 self.ying_hits.append((now + 0.3, 13))
             elif self.tongyu:
                 self.zhao_xin = max(0, self.zhao_xin - 10)        # 实机普攻打空照世心要 ~5.2s
+            elif self.lin_unlocked and self.r2_need_taps > 0:
+                self.r2_need_taps -= 1
+                if self.r2_need_taps == 0:
+                    rec('心大招能量攒满')
             else:
                 if not self.huozi and now >= self.e_cd[XN]:
                     self.huozi = True
@@ -509,6 +534,9 @@ class FakeTask:
         time.sleep(0.03)
         G.tick()
 
+    def middle_click(self, *a, **kw):
+        rec('中键锁目标')
+
     def in_team(self):
         return (G.hud_visible(), G.on_field, 3) if G.hud_visible() else (False, -1, 0)
 
@@ -541,7 +569,7 @@ class FakeTask:
         if name == 'hsin_lib1':
             return G.xn_mode == 'ying' or None
         if name == 'hsin_lib2':
-            return (G.xn_mode == 'zhao' and G.lin_unlocked) or None
+            return (G.xn_mode == 'zhao' and G.lin_unlocked and G.r2_need_taps <= 0) or None
         return None
 
     def add_freeze_duration(self, *a, **kw):
@@ -723,6 +751,7 @@ def statue_count():
 
 
 xn.xn_statue_count = statue_count
+xn.target_visible = lambda: time.time() >= getattr(G, 'no_target_until', 0.0)
 xn.break_prompt = lambda: BREAK and G.on_field == XN and G.tongyu and time.time() >= G.break_cd and G.hud_visible()
 
 ok = True

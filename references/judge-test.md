@@ -16,7 +16,7 @@
 ## 用法
 
 ```bash
-PY=F:/ok-ww/data/apps/ok-ww/python/python.exe
+PY="F:/coco-ww/python/python.exe -X utf8"   # 原版: F:/ok-ww/data/apps/ok-ww/python/python.exe
 J=~/.claude/skills/okww-axis/scripts/judge_test.py
 V="E:/录屏/Wuthering Waves/心雷穗完美视频.mp4"
 $PY $J list hsin__rover                                    # 候选判据(只带 self、读屏、不等待不按键的方法)

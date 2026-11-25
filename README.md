@@ -40,20 +40,21 @@ Windows 上 `~` 是 `C:\Users\<用户名>`。不用 git 的话点 **Code → Dow
 | `references/finalize.md` | 定稿、导出、分享、备份清单 |
 | `references/teams-index.md` | 哪个角色的判据去哪条轴抄 |
 | `scripts/` | 帧表查询、视频工具、离线判据测试、跑轴记录读取、队伍代码静态检查、定稿导出 |
-| `assets/reference_team/Hsin__Rover__Suisui/` | 参考队伍心雷穗 v1.0.0：引擎模板 + 干跑模板（见里面的 README） |
+| `assets/reference_team/Hsin__Rover__Suisui/` | 参考队伍心雷穗 v1.1.0 导出版（MacroKit 已内联，原版 OKWW 也能跑）：持宏者骨架 + 干跑模板（见里面的 README） |
 
 ## 环境
 
-- **ok-ww**：脚本都用 ok-ww 自带的 python 跑（`<安装目录>/data/apps/ok-ww/python/python.exe`），会自己找 working 目录：环境变量 `OKWW_WORKING` > 当前目录往上找 > `<当前目录>/data/apps/ok-ww/working`。
-- 文档里的 `F:\ok-ww`、`E:\轴视频` 是作者机器上的路径，换成你自己的读；`team_backup`、其他队伍目录、每条轴的 memory 你那边没有，Claude 会先问。
+- **ok-ww / coco-ww**：脚本都用框架自带的 python 跑（原版 `<安装目录>/data/apps/ok-ww/python/python.exe`；[coco-ww](https://github.com/wk321425/coco-ww) `<安装目录>/python/python.exe -X utf8`），会自己找 working 目录（有 `src/char/CustomCharLoader.py` 的那层）：环境变量 `OKWW_WORKING` > 当前目录往上找 > `<当前目录>/data/apps/ok-ww/working`。coco-ww 是平铺结构，安装目录本身就是 working。
+- 文档里的 `F:\coco-ww`、`F:\ok-ww`、`E:\轴视频` 是作者机器上的路径，换成你自己的读；`team_backup`、其他队伍目录、每条轴的 memory 你那边没有，Claude 会先问。
 - 可选：
   - ffmpeg / PySceneDetect —— `video_tool.py` 用来精确跳帧、找剪辑点，`OKWW_FFMPEG` / `OKWW_PYLIB` 指定位置，没有就退回 OpenCV。
   - 官方动作帧表 xlsx —— 不随附，`frame_data.py --xlsx <路径>` 指定。
-  - [「跑轴记录」插件](https://github.com/wk321425/ok-ww-axis-recorder) —— `run_report.py` 读它的记录和反馈包，`OKWW_AXIS_RECORDER`（插件源码目录）/ `OKWW_AXIS_RUNS`（记录目录）指定位置。
+  - [「跑轴记录」插件](https://github.com/wk321425/ok-ww-axis-recorder) —— `run_report.py` 读它的记录和反馈包，`OKWW_AXIS_RECORDER`（插件源码目录）/ `OKWW_AXIS_RUNS`（记录目录）指定位置。coco-ww 已经内置（`src/recorder`），不用装也不用设。
   - `export_team.py` 的备份位置用 `OKWW_BACKUP_ROOT` 改。
 
 ## 相关项目
 
+- [coco-ww](https://github.com/wk321425/coco-ww)：基于 ok-ww 裁剪自维护的版本，只留自动战斗和刷 4C 声骸，内置跑轴记录、F 开战和持宏公共原语 `src/combat/MacroKit.py`（导出队伍时自动内联，原版 OKWW 照样能用）。
 - [ok-ww-axis-recorder](https://github.com/wk321425/ok-ww-axis-recorder)：ok-ww 插件「跑轴记录」，每局记下按键/读屏/在场/画面，实机排查先看它。
 - [ok-ww-f-start-combat](https://github.com/wk321425/ok-ww-f-start-combat)：ok-ww 插件「F 开始战斗」，副本里按 F 立即开打。
 

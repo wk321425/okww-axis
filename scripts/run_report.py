@@ -11,7 +11,7 @@
                                                一段时间的画面拼成一张缩略图(一张图看一串动作, 比一帧帧看省)
   run_report.py exports <局>                   这局按 F8 导出的原图文件夹(2K PNG)和 judge_test 命令
 
-秒 = 这局开打后的秒数(时间线/表格里的时间)。插件源码按 OKWW_AXIS_RECORDER > <安装根>/pr_work/axis_recorder_plugin >
+秒 = 这局开打后的秒数(时间线/表格里的时间)。插件源码按 OKWW_AXIS_RECORDER > coco-ww 的 src/recorder > <安装根>/pr_work/axis_recorder_plugin >
 working/ok_import 找; 记录目录默认 working/logs/axis_runs, 可用 OKWW_AXIS_RUNS 改。
 """
 import argparse
@@ -50,7 +50,9 @@ def load_plugin(working):
     env = os.environ.get('OKWW_AXIS_RECORDER')
     if env:
         cands.append(Path(env))
-    cands += [install_root(working) / 'pr_work' / 'axis_recorder_plugin' / 'axis_recorder',
+    # coco-ww 把插件并进了主程序: src/recorder, 当 src.recorder 包导入
+    cands += [working / 'src' / 'recorder',
+              install_root(working) / 'pr_work' / 'axis_recorder_plugin' / 'axis_recorder',
               working / 'ok_import' / 'axis_recorder']
     for folder in cands:
         try:
@@ -61,11 +63,15 @@ def load_plugin(working):
     else:
         die('没找到「跑轴记录」插件的源码(要有 runs.py / media.py)。设 OKWW_AXIS_RECORDER=<插件的 axis_recorder 文件夹> 再跑;\n'
                  '没装这个插件就只能按老办法看 ok-script.log 和录屏。')
-    if folder.name != 'axis_recorder':
-        die(f'插件文件夹要叫 axis_recorder: {folder}')
     sys.path.insert(0, str(working))
-    sys.path.insert(0, str(folder.parent))
     os.chdir(working)
+    folder = folder.resolve()
+    if folder == (working / 'src' / 'recorder').resolve():
+        from src.recorder import media, runs  # noqa: E402
+        return runs, media
+    if folder.name != 'axis_recorder':
+        die(f'插件文件夹要叫 axis_recorder(coco-ww 的 src/recorder 除外): {folder}')
+    sys.path.insert(0, str(folder.parent))
     from axis_recorder import media, runs  # noqa: E402
     return runs, media
 

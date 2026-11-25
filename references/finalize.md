@@ -39,19 +39,35 @@
    ```
    只调 `BaseChar` / task 通用方法的轴不需要；自己继承的那条链不用包（缺了就该炸得明显）。
    最好再拿一个故意少参数、少方法的假内置类跑一遍适配层。
-5. **更新 team.json**：`version`（1.0.0 起，小改 1.1.0）、`description` 改成**现行流程**（启动轴/循环轴/保底各一段，写清对用户配置的要求：共鸣模态、链数、声骸、16:9、默认键位、"切人按角色不按编队"）、`author`、`team`（英文显示名按字母序逗号连接）。
-   也把同样的流程写进持宏者 docstring。
-   不知道的配置（链数、共效、声骸）别照视频作者的编，空着，汇报里问用户要不要补。
-6. **导出 + 校验 + 备份**：
-   ```bash
-   F:/ok-ww/data/apps/ok-ww/python/python.exe ~/.claude/skills/okww-axis/scripts/export_team.py <队伍> 定稿v1.0
+5. **同步 `.import.py`**：导入过的队伍（目录里有 `<类名>.import.py`）导出的是 `.import.py` 那份，不是正在改的 `<类名>.py`。改过的文件两份都要一样（`export_team.py` 会 WARN 并按 `.import.py` 比对）。
+6. **更新 team.json**：`version`（1.0.0 起，小改加次版本号 1.1.0）、`author`（楽山）、`team`（英文显示名按字母序逗号连接）、`description`。
+   **description 用用户自己那种短格式**（照他写的爱琳莫 3.0.0 / 心锁莉 / 绯洛穗），用户给过旧版说明就在那份上面加，**不重写**：
    ```
-   它会：复制三个 .py + team.json + dryrun.py.tool 到 `F:\ok-ww\team_backup\<日期>_<队伍>_<标签>\`；
-   用框架 `export_custom_team` 导出 zip（只含 team.json + 3 个 .py）；用 `inspect_team_archive`（导入方那套校验）验；逐字节比对 zip 和部署文件。
+   <轴名>
+   样本：61爱00琳11莫
+   共效：爱弥斯125 琳奈140 莫宁260
+   位置：一号位… 二号位… 三号位…
+   定位：【矩阵/深塔/…】（有的写「场景」，就是适用环境）
+   实机已跑通/未跑通 + 实测表现（一圈多少秒、复现难度、起手建议）
+   vX.Y.Z：这一版改了什么（一行，越短越好）
+   提醒：画面16:9、默认键位、HUD不缩放 之类
+   ```
+   要简略（以前写过【流程】【本版修改】长段落，用户换回了短格式）。完整流程写进持宏者 docstring，不写进说明。
+   没实机过的改动别写成"实测"。不知道的配置（链数、共效、声骸）别照视频作者的编，空着，汇报里问用户要不要补。
+7. **导出 + 校验 + 备份**：
+   ```bash
+   F:/coco-ww/python/python.exe -X utf8 ~/.claude/skills/okww-axis/scripts/export_team.py <队伍> 定稿v1.0 --copy-to <分享文件夹>
+   ```
+   它会：复制 .py（含 .import.py）+ team.json + dryrun.py.tool 到 `<安装目录>\team_backup\<日期>_<队伍>_<标签>\`（coco-ww 是 `F:\coco-ww\team_backup`）；
+   用框架 `export_custom_team` 导出 zip（只含 team.json + 3 个 .py，MacroKit 自动内联）；用 `inspect_team_archive`（导入方那套校验）验；
+   逐个比对 zip 和部署文件（内联过的先用框架的 `collapse_shared_modules` 收回成 import 再比）；查 zip 里有没有 coco-ww 专有模块的裸导入；有问题打 `[ERROR]` 返回 1。
+   `--copy-to` 把 zip 再复制到用户放分享包的文件夹（楽山的在 memory 里记着），同名已存在就不覆盖 —— 先看那个文件夹里已有的版本，别重名。
    只想留版本不导出时加 `--no-zip`。标签别重名（脚本不覆盖已有备份）。
-7. **提醒用户备份**（具体地说）：备到 `configs/custom_teams/` **外面**（他习惯 `F:\ok-ww-备份-<日期>\`；`team_backup` 已经有一份）。
+   **想确认原版 OKWW 能用**：解压 zip 里的持宏者文件，用原版 python（`-I`）、cwd/`sys.path` 指原版 repo，`importlib` 加载，看 `MacroKit` 和 `start_f_watch` 的 `__module__` 都是文件自己（不是 `src.combat.*`）。
+8. **提醒用户备份**（具体地说）：备到 `configs/custom_teams/` **外面**（`team_backup` 已经有一份）。
    换代码的正确姿势：**把文件复制进已有文件夹，别整个文件夹搬**（整个搬过来带过一次坏 ACL，目录谁都读不了，只能 UAC 提权 `takeown`+`icacls` 拿回来；也覆盖丢过一整天的标定）。
-8. **更新 memory**：这条轴的 memory 记一行"<日期> 定稿分享 vX"：导出文件名、备份路径、最后几处改动是否实机过、给别人用时要改的开关。MEMORY.md 索引行同步更新。
+9. **更新 memory**：这条轴的 memory（F--ok-ww 那边的 `ok-ww-*-axis.md`）记一行"<日期> 定稿分享 vX"：导出文件名、备份路径、最后几处改动是否实机过、给别人用时要改的开关。那边 MEMORY.md 索引行同步更新。
+10. **不提交 configs/**：coco-ww 仓库里 `configs/` 下的队伍代码切换（内置/自定义）、测试配置、校准数据是用户本机的测试状态，定稿也不顺手提交，除非用户点名。
 
 ## 给别人用时的开关
 

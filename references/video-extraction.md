@@ -29,7 +29,7 @@
 `frame`/`sheet` 直接跳到那一秒（290 秒处取一帧 0.5s，cv2 要顺序解 15s），裁剪缩放在 ffmpeg 里做完，`freeze`/`sheet` 快 10 倍左右。
 
 ```bash
-PY=F:/ok-ww/data/apps/ok-ww/python/python.exe
+PY="F:/coco-ww/python/python.exe -X utf8"   # 原版: F:/ok-ww/data/apps/ok-ww/python/python.exe
 T=~/.claude/skills/okww-axis/scripts/video_tool.py
 $PY $T info "E:/轴视频/xxx.mp4"                       # 分辨率/fps/时长
 $PY $T frame "E:/轴视频/xxx.mp4" 160 -o f160.png      # 整帧看布局(字幕在哪、有没有浮层、游戏区是不是全屏)

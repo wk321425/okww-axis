@@ -1,8 +1,29 @@
-# 持宏引擎：结构、原语、从哪抄
+# 持宏引擎：MacroKit、结构、原语
 
-最新、最完整的一份是心雷穗 v1.0（2026-10-06）的 `Hsin.py`，**skill 里自带一份**：`assets/reference_team/Hsin__Rover__Suisui/`（连同两个转发文件、team.json、干跑工具），新队伍从它抽。
-别的机器上不一定有下面提到的其他队伍目录，那些只在楽山的 ok-ww 里。
+**2026-11-24 起通用原语在 coco-ww 的 `src/combat/MacroKit.py`**，楽山的持宏队伍都写成 `class X(MacroKit, NativeX)`，不再每队抄一份引擎（以前各抄各的，改一处要几边同步，抄着抄着改出了不同版本）。
+参考队伍是心雷穗 v1.1.0：coco-ww 里的 `configs/custom_teams/Hsin__Rover__Suisui/`；**skill 里自带它的导出版**（MacroKit 已内联、自包含，原版 OKWW 也能跑）在 `assets/reference_team/Hsin__Rover__Suisui/`，连同两个转发文件、team.json、干跑工具。
+别的机器上不一定有下面提到的其他队伍目录，那些只在楽山的 coco-ww / ok-ww 里。
 宏表回放型的参考是 `Chisa__Suisui__YangYangSp/YangYangSp.py`（秧千穗 v4.1）和 `Changli__Jinhsi__Verina/Changli.py`（龙凤维）。
+
+## 0. MacroKit 怎么用
+
+```python
+from src.char.Hsin import Hsin as NativeHsin
+from src.combat.MacroKit import MacroKit, MacroBroken, send_input_left   # 单独写在顶层一行, 导出时才内联得了
+
+
+class Hsin(MacroKit, NativeHsin):
+    A_TAP = 0.05          # MacroKit 的方法读的常量都写在队伍类上
+    ...
+```
+
+- **只放方法，不放类常量、不写 `__init__`**：节奏、阈值各队写在自己类上，MacroKit 的方法照样 `self.XXX` 取。用到哪个方法，队伍类就要有它读的常量：`A_*` 普攻节奏、`KEY_*` 技能键重发、`SWITCH_*` 切人、`HUD_*` / `FIELD_*` 在场判定、`CON_*` 协奏、`LIB_*` / `R_*` 大招、`BREAK_*` 处决提示、`E_RESEND_STEP`、`PRECHARGE_TO_SWITCH`、`SKILL_BAR_SETTLE`、`TRACE_SWITCH`、`UNTRUSTED_CONFIRM`、`RETRY_HUD_CAP`。状态（`macro_t0`、`macro_marks`、`holding_attack` …）在队伍类的 `__init__` / `reset_state` 里初始化。缺了 `check_team.py` 会报。
+- **要不一样的写法就在队伍类里写同名方法**盖过去（MRO：队伍类 → MacroKit → 原生角色类）。比如心雷穗 `Hsin.click()` 在队伍类里重写成 `self.tap()`；各队自己的 `drive` / `seg_*` / 判据本来就在队伍类里。
+- **别往 MacroKit 里加新名字**，也别收 `BaseChar` / 原生角色类上已有的名字：队友代码用 `hasattr(char, 'quick_switch')` 这种按名字认持宏者，多一个名字判断就变了；收了框架已有的名字会盖掉没重写它的队伍原来走的框架版本。真要改 MacroKit 里的方法，20 多支队都会跟着变，要逐队实测（各队以前改出的不同版本还没收敛，用户没要求前别动）。
+- MacroKit 只能 import 标准库、numpy、cv2 和原版 OKWW 也有的框架模块，模块级名字也别跟队伍代码撞（导出内联后在同一个模块里）。
+- **导出**：`CustomCharLoader.export_custom_team` 把那行 import 换成 MacroKit 源码（前后有 `# >>>>>>>>` / `# <<<<<<<<` 标记行）；**导入**时标记里那段跟本地 MacroKit 一字不差就收回成 import，对不上（别的版本导出的）就原样留着自包含跑。所以 zip 里的持宏者文件跟本地不是逐字节一样，`export_team.py` 会收回再比。直接把 .py 拷到原版 OKWW 不行，要走导出。
+- `macro_wait` 在 coco-ww 里走 `BaseChar.precise_wait`（不插框架的战斗判定；停任务马上生效；暂停 / 前台模式下游戏切走时**松开按着的键、抛 `PreciseWaitPaused` 让宏从头来**）；原版 OKWW 没有就退回 0.1s 切片等待。`PreciseWaitPaused` 是 `BaseException`，队伍代码的 `except Exception` 吞不掉它 —— **宏里别写裸 `except:` / `except BaseException`**，会把暂停吞掉、松了键接着按半截宏。
+- 还没转的老队（爱琳莫 `Aemeath__Linnai__Mornye`、心锁莉 `Hsin__Lily__Suoming`，以及故意跳过的 `Cartethyia__Ciaccona__Youhu`：转了会多出被队友探测的 `quick_switch`）仍是整套自带引擎。转换用 coco-ww 的 `tools/macrokit_convert.py`（只删和 MacroKit 逐字一样的方法，删前删后逐个名字比对加载结果）。
 
 ## 目录
 
@@ -15,7 +36,7 @@
 7. 大招与演出
 8. 长按与 SendInput
 9. 日志：时间轴是排查的唯一依据
-10. 引擎怎么搬到新队伍
+10. 新队伍怎么起步
 
 ---
 
@@ -44,19 +65,19 @@
 
 ```
 模块顶部
+  from src.combat.MacroKit import MacroKit, MacroBroken, send_input_left   —— 原语 + 整圈放弃的异常 + SendInput 左键
   F 键监视 + 开关监视: f_settings / start_f_watch / start_enable_watch
-      —— 椰果版从 src.combat.AxisWatch 导入, 必须包 try/except ImportError 自带一份(原版 OKWW 没这个模块),
-         整段照抄心锁莉 Hsin.py; 见 framework-pitfalls.md「分享出去的兼容性」
-  SendInput 结构体 + send_input_left(up)                          —— 需要系统级长按时才要
-  class MacroBroken(Exception)                                   —— 切人失败/HUD 长时间不在 -> 整圈放弃
-class <持宏者>(Native<持宏者>):
+      —— coco-ww 从 src.combat.AxisWatch 导入, 必须包 try/except ImportError 自带一份(原版 OKWW 没这个模块),
+         整段照抄参考队伍 Hsin.py 开头; 见 framework-pitfalls.md「分享出去的兼容性」
+class <持宏者>(MacroKit, Native<持宏者>):
   docstring: 轴的出处 / 轴的形状(启动轴、循环轴逐格) / 为什么这么打(nanoka) / 判据 / 改之前先读
   常量块(按组): 全局节奏 / 切人 / 大招·演出 / 防重入 / 保底 / 每个角色一组(前缀区分, 循环轴专用加 L_)
+               —— MacroKit 方法读的那些(A_* SWITCH_* HUD_* CON_* LIB_* ...)也在这里
   __init__ / reset_state
-  队伍判定: is_in_<队> / teammate(name) / opener_pending / opener_blocked_by
-  引擎原语(macro_* / spam_key / tap / quick_switch / handoff / fire_r / ensure_r / wait_hud_* / read_con ...)
+  队伍判定: is_in_<队> / opener_blocked_by        (teammate / opener_pending 在 MacroKit)
+  盖过 MacroKit 的同名方法(这条轴要不一样的写法时才有), 例如 click -> tap
   每个角色: 判据函数 + seg_* 段落
-  一圈: run_cycle / macro_enter / macro_exit / perform_opener / perform_loop
+  一圈: run_cycle / macro_enter / perform_opener / perform_loop   (macro_exit 在 MacroKit)
   框架接口: drive / do_perform / get_switch_priority / on_combat_end
 ```
 
@@ -155,9 +176,11 @@ def drive(self, entry):
 
 ## 5. 原语清单
 
+都在 MacroKit 里（完整列表 `grep -n "    def " src/combat/MacroKit.py`），下面是最常用的。
+
 | 原语 | 语义 | 坑 |
 |---|---|---|
-| `macro_wait(sec)` | 精确等待，**不点击**；0.1s 一片，片间 `check_enabled` | 用在需要持续输出的格子上就是白给 |
+| `macro_wait(sec)` | 精确等待，**不点击**；coco-ww 走 `precise_wait`（暂停时松键、宏从头来），原版 0.1s 一片、片间 `check_enabled` | 用在需要持续输出的格子上就是白给 |
 | `macro_mark(name)` | 打时间轴标记；顺手做 HUD 看门狗（只比时间戳，不读屏） | 每一步都要打 |
 | `hud_ok()` | 读当前帧队伍 HUD 在不在，在就刷新看门狗时刻 | |
 | `tap(hold=A_TAP)` | 真按住 0.05~0.06s 的一下普攻 | `task.click()` 只有 10ms 会被吞 |
@@ -209,7 +232,9 @@ def drive(self, entry):
 ## 8. 长按与 SendInput
 
 - PostMessage 长按：一次 `mouse_down()` 一直有效，**包括跨过切人**（但长按跨切人不会让新角色出手，只对"当前角色继续当前动作"有效）。
-  长按期间任何 `mouse_down` / `send_key` / `click` 都会投 `WM_ACTIVATE` 把按住打断。需要在按住期间按别的键时用不带 activate 的发键（景月守的 `key_na`）。
+  原版 OKWW 长按期间任何 `mouse_down` / `send_key` / `click` 都会投 `WM_ACTIVATE` 把按住打断。需要在按住期间按别的键时用不带 activate 的发键（景月守的 `key_na`）。
+  coco-ww v1.0.7 起（移植 ok-script 66e5eaf）只在窗口前台状态变过之后才补投 `WM_ACTIVATE`，按住期间发键不再打断 —— 但分享的代码要在原版上也对，照旧按上面写。
+- coco-ww 的交互方式还可以选 **Pynput 前台输入**（真键盘事件，`GetAsyncKeyState` 也看得到宏自己按的键）：框架的 F 开战监视会忽略 coco-ww 自己按的 F（`FKeyStart.note_self_key`），队伍代码自己的 F 监视兜底版没有这层，只在原版 OKWW（PostMessage）上用。
 - 蓄力类长按（绯雪 R2、秧秧重击）**不能重发按下**：按一次 → `macro_wait` → 松。"按住期间每 0.2s 重发防掉键"等于连点，蓄力从来没起来。
 - 需要系统级长按时用 `SendInput`（`attack_down(direct=True)`），**SendInput 按下的必须 SendInput 松开**，否则宏异常退出时整台电脑的左键都是按着的。
   `macro_exit` 和 `on_combat_end` 都要 `release_attack()`。
@@ -224,10 +249,11 @@ def drive(self, entry):
 - 切人慢（>0.4s）时打 trace；协奏没满时打采样序列；判据走了哪条路（`lead` / `air` / `forte` / `cap` / `blind`）写进标记。
 - 判据函数里**不要夹带只给日志用的读屏**（一次 OCR 几十毫秒，轮询里每次都花）。
 
-## 10. 引擎怎么搬到新队伍
+## 10. 新队伍怎么起步
 
-1. 选底子：引擎原语从最新定稿的那份抽；某个角色的判据/段落从做过这个角色的队伍抽（见 `teams-index.md`）。
-2. 写个构建脚本按方法名逐字抽方法拼成新文件（别手抄），顺手检查每个被引用的常量都定义了。生成后**以后直接改生成的文件**，构建脚本只用一次。
+1. 选底子：骨架（模块顶部的监视线程兜底、常量块、`__init__` / `reset_state`、`drive` / `opener_blocked_by` / `macro_enter`、转发文件）照参考队伍 `Hsin__Rover__Suisui`；原语直接继承 MacroKit；某个角色的判据/段落从做过这个角色的队伍抽（见 `teams-index.md`）。
+2. 从别的队伍抽段落/判据时按方法名逐字抽（写个小脚本，别手抄），顺手检查每个被引用的常量都定义了。抄来的方法要是跟 MacroKit 里的同名，先确认是不是有意盖过（大多数是旧引擎的拷贝，删掉用 MacroKit 的）。
 3. 抄完逐条过"按住语义"和"旧常量"（SKILL.md D 节）。
-4. 改类名、`is_in_<队>`、`teammate()` 用到的类名、日志前缀（每条轴一个短前缀，`xls:` / `jys:`），F 监视/开关监视逐字保留。
+4. 改类名、`is_in_<队>`、`teammate()` 用到的类名、日志前缀（每条轴一个短前缀，`xls:` / `jys:`），F 监视/开关监视兜底那段逐字保留。
 5. `check_team.py` 过一遍，再写干跑。
+6. 原版 OKWW 上（没有 MacroKit）：以 skill 自带的导出版 `Hsin.py` 为底，`# >>>>>>>>` 到 `# <<<<<<<<` 之间就是整套原语，留着别动；以后要搬回 coco-ww，导入时会自动收回成 import（内联段得跟本地 MacroKit 一字不差）。

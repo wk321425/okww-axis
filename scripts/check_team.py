@@ -126,6 +126,9 @@ def check_file(path, base_char_cls, task_cls):
                 any(node.module == m or node.module.startswith(m + '.') for m in COCO_ONLY_MODULES):
             err(f'{path.name}:{node.lineno}: 裸导入椰果版专有模块 {node.module} -> 原版 OKWW 加载失败; '
                 f'包成 try/except ImportError 并自带一份(照心锁莉 Hsin.py 的监视线程那段)')
+        # MacroKit 是例外: 导出 zip 时框架把顶层这行换成模块源码(SHARED_TEAM_MODULES), 裸导入是对的
+        if isinstance(node, ast.ImportFrom) and node.module == 'src.combat.MacroKit' and node.level == 0:
+            info(f'{path.name}: 继承 MacroKit(导出 zip 时自动内联, 原版 OKWW 能用; 直接把 .py 拷过去不行, 要走导出)')
 
     try:
         cls = load_class(path, name)
